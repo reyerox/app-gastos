@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZenGastos</title>
+  <meta name="description" content="Registro de gastos compartido para parejas" />
+  <meta name="theme-color" content="#0d0d0f" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Syne', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+          colors: {
+            bg: {
+              base: '#0d0d0f',
+              card: '#141418',
+              elevated: '#1a1a20',
+              border: '#252530',
+            },
+            income: {
+              DEFAULT: '#22c55e',
+              muted: '#16a34a22',
+              dim: '#16a34a',
+            },
+            expense: {
+              DEFAULT: '#ef4444',
+              muted: '#dc262622',
+              dim: '#dc2626',
+            },
+            accent: '#7c6dfa',
+            muted: '#52525e',
+            subtle: '#3a3a46',
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            slideIn: { '0%': { opacity: '0', transform: 'translateX(-12px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+            pop: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
+          },
+          animation: {
+            fadeIn: 'fadeIn 0.3s ease forwards',
+            slideIn: 'slideIn 0.25s ease forwards',
+            pop: 'pop 0.2s ease forwards',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #0d0d0f; color: #e8e8ed; font-family: 'Syne', sans-serif; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0d0d0f; }
+    ::-webkit-scrollbar-thumb { background: #252530; border-radius: 4px; }
+
+    .glass {
+      background: rgba(20, 20, 24, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(37, 37, 48, 0.8);
+    }
+
+    .progress-bar {
+      height: 6px;
+      border-radius: 99px;
+      background: #1a1a20;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6d5dfc, #9f7aea);
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124, 109, 250, 0.4); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .modal-overlay {
+      animation: fadeIn 0.2s ease forwards;
+    }
+    .modal-box {
+      animation: pop 0.22s ease forwards;
+    }
+
+    .tx-row {
+      animation: slideIn 0.2s ease forwards;
+      transition: background 0.15s ease;
+    }
+    .tx-row:hover { background: rgba(26, 26, 32, 0.7); }
+
+    .chip {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      letter-spacing: 0.03em;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    .nav-dot { transition: all 0.2s ease; }
+
+    @media (max-width: 640px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+
+  <!-- React + ReactDOM via CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel for JSX transpilation in browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+    // ─── Constants ───────────────────────────────────────────────
+    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const CATEGORIES = ['Obligatorios', 'Opcionales', 'Ocio', 'Otros'];
+    const CATEGORY_COLORS = {
+      'Obligatorios': '#7c6dfa',
+      'Opcionales':   '#f59e0b',
+      'Ocio':         '#22c55e',
+      'Otros':        '#64748b',
+    };
+    const STORAGE_KEY = 'zengastos_transactions';
+    const USER_A = 'Usuario A';
+    const USER_B = 'Usuario B';
+
+    const genId = () => `tx_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+
+    // ─── LocalStorage helpers ────────────────────────────────────
+    const loadTx = () => {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      catch { return []; }
+    };
+    const saveTx = (txs) => localStorage.setItem(STORAGE_KEY, JSON.stringify(txs));
+
+    // ─── CSV helpers ─────────────────────────────────────────────
+    const CSV_HEADERS = ['id','date','type','concept','amount','category','paidBy'];
+
+    const exportCSV = (transactions, month, year) => {
+      const filtered = transactions.filter(t => {
+        const d = new Date(t.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      });
+      const sorted = [...filtered].sort((a,b) => new Date(a.date) - new Date(b.date));
+      const rows = [CSV_HEADERS.join(',')];
+      for (const t of sorted) {
+        rows.push([t.id, t.date, t.type, `"${t.concept.replace(/"/g,'""')}"`, t.amount, t.category, t.paidBy].join(','));
+      }
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ZenGastos_${MONTHS[month]}_${year}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    const parseCSV = (text) => {
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) return [];
+      const headers = lines[0].split(',').map(h => h.trim());
+      const idxOf = (k) => headers.indexOf(k);
+      const result = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || lines[i].split(',');
+        const clean = cols.map(c => c ? c.replace(/^"|"$/g,'').replace(/""/g,'"').trim() : '');
+        const t = {
+          id:       clean[idxOf('id')]       || genId(),
+          date:     clean[idxOf('date')]      || new Date().toISOString().slice(0,10),
+          type:     clean[idxOf('type')]      || 'expense',
+          concept:  clean[idxOf('concept')]   || 'Sin concepto',
+          amount:   parseFloat(clean[idxOf('amount')]) || 0,
+          category: clean[idxOf('category')] || 'Otros',
+          paidBy:   clean[idxOf('paidBy')]   || USER_A,
+        };
+        if (t.amount > 0) result.push(t);
+      }
+      return result;
+    };
+
+    // ─── Icons (inline SVG components) ──────────────────────────
+    const Icon = ({ d, size = 18, className = '' }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d={d} />
+      </svg>
+    );
+
+    const ChevronLeft  = ({ size }) => <Icon size={size} d="M15 18l-6-6 6-6" />;
+    const ChevronRight = ({ size }) => <Icon size={size} d="M9 18l6-6-6-6" />;
+    const PlusIcon     = ({ size }) => <Icon size={size} d="M12 5v14M5 12h14" />;
+    const TrashIcon    = ({ size }) => <Icon size={size} d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />;
+    const DownloadIcon = ({ size }) => <Icon size={size} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />;
+    const UploadIcon   = ({ size }) => <Icon size={size} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
+    const XIcon        = ({ size }) => <Icon size={size} d="M18 6L6 18M6 6l12 12" />;
+    const WalletIcon   = ({ size }) => <Icon size={size} d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 14a2 2 0 100-4 2 2 0 000 4z" />;
+
+    // ─── Modal component ─────────────────────────────────────────
+    const Modal = ({ title, onClose, children }) => (
+      <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
+        <div className="modal-box glass rounded-2xl w-full max-w-md p-6" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold font-display">{title}</h2>
+            <button onClick={onClose} className="text-muted hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
+              <XIcon size={20} />
+            </button>
+          </div>
+          {children}
+        </div>
+      </div>
+    );
+
+    // ─── Summary Card ────────────────────────────────────────────
+    const SummaryCard = ({ label, value, color, prefix = '€', sub }) => (
+      <div className="glass rounded-2xl p-4 flex flex-col gap-1">
+        <span className="text-xs text-muted font-display tracking-widest uppercase">{label}</span>
+        <span className="text-2xl font-bold font-mono" style={{ color }}>
+          {prefix}{typeof value === 'number' ? value.toFixed(2) : value}
+        </span>
+        {sub && <span className="text-xs text-muted">{sub}</span>}
+      </div>
+    );
+
+    // ─── Transaction Row ─────────────────────────────────────────
+    const TxRow = ({ tx, onDelete }) => {
+      const isIncome = tx.type === 'income';
+      return (
+        <div className="tx-row flex items-center gap-3 px-4 py-3 rounded-xl group">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+               style={{ background: isIncome ? '#16a34a22' : '#dc262622' }}>
+            <span style={{ color: isIncome ? '#22c55e' : '#ef4444', fontSize: 16 }}>
+              {isIncome ? '↑' : '↓'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm truncate">{tx.concept}</span>
+              <span className="chip" style={{ background: CATEGORY_COLORS[tx.category] + '22', color: CATEGORY_COLORS[tx.category] }}>
+                {tx.category}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-muted">{new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day:'2-digit', month:'short' })}</span>
+              <span className="text-xs text-muted">·</span>
+              <span className="text-xs" style={{ color: '#7c6dfa' }}>{tx.paidBy}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-bold font-mono text-sm" style={{ color: isIncome ? '#22c55e' : '#ef4444' }}>
+              {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
+            </span>
+            <button onClick={() => onDelete(tx.id)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-expense p-1 rounded-lg hover:bg-expense/10">
+              <TrashIcon size={15} />
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    // ─── Add Transaction Modal ────────────────────────────────────
+    const AddModal = ({ type, onSave, onClose, currentMonth, currentYear }) => {
+      const isIncome = type === 'income';
+      const today = new Date();
+      const defaultDate = new Date(currentYear, currentMonth, today.getDate() <= new Date(currentYear, currentMonth+1, 0).getDate()
+        ? (currentYear === today.getFullYear() && currentMonth === today.getMonth() ? today.getDate() : 1)
+        : 1).toISOString().slice(0, 10);
+
+      const [form, setForm] = useState({
+        concept: '', amount: '', category: CATEGORIES[0], paidBy: USER_A, date: defaultDate
+      });
+
+      const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+      const inputClass = "w-full bg-bg-elevated border border-bg-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-accent transition-colors font-display";
+      const labelClass = "block text-xs text-muted mb-1.5 font-display tracking-wide uppercase";
+
+      const handleSave = () => {
+        if (!form.concept.trim() || !form.amount || parseFloat(form.amount) <= 0) return;
+        onSave({
+          id: genId(),
+          date: form.date,
+          type,
+          concept: form.concept.trim(),
+          amount: parseFloat(parseFloat(form.amount).toFixed(2)),
+          category: form.category,
+          paidBy: form.paidBy,
+        });
+        onClose();
+      };
+
+      return (
+        <Modal title={isIncome ? '+ Nuevo Ingreso' : '+ Nuevo Gasto'} onClose={onClose}>
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Fecha</label>
+              <input type="date" className={inputClass} value={form.date} onChange={e => set('date', e.target.value)} style={{ colorScheme: 'dark' }} />
+            </div>
+            <div>
+              <label className={labelClass}>Concepto</label>
+              <input type="text" className={inputClass} placeholder="Ej: Supermercado, Netflix..." value={form.concept} onChange={e => set('concept', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelClass}>Cantidad (€)</label>
+              <input type="number" step="0.01" min="0" className={inputClass} placeholder="0.00" value={form.amount} onChange={e => set('amount', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelClass}>Categoría</label>
+              <select className={inputClass} value={form.category} onChange={e => set('category', e.target.value)} style={{ colorScheme: 'dark' }}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>¿Quién ha pagado?</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[USER_A, USER_B].map(u => (
+                  <button key={u} onClick={() => set('paidBy', u)}
+                    className="py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style={{
+                      background: form.paidBy === u ? '#7c6dfa22' : '#1a1a20',
+                      border: `1px solid ${form.paidBy === u ? '#7c6dfa' : '#252530'}`,
+                      color: form.paidBy === u ? '#a89dfc' : '#888'
+                    }}>
+                    {u}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button onClick={handleSave}
+              className="btn-primary w-full py-3 rounded-xl text-sm font-bold font-display tracking-wide mt-2"
+              style={{ color: '#fff' }}>
+              Guardar {isIncome ? 'Ingreso' : 'Gasto'}
+            </button>
+          </div>
+        </Modal>
+      );
+    };
+
+    // ─── Main App ─────────────────────────────────────────────────
+    const App = () => {
+      const now = new Date();
+      const [transactions, setTransactions] = useState(loadTx);
+      const [month, setMonth] = useState(now.getMonth());
+      const [year, setYear]   = useState(now.getFullYear());
+      const [filter, setFilter] = useState('all'); // all | expense | income
+      const [modal, setModal]   = useState(null);   // null | 'expense' | 'income'
+      const [toast, setToast]   = useState(null);
+      const fileRef = useRef();
+
+      useEffect(() => saveTx(transactions), [transactions]);
+
+      const showToast = (msg, color = '#22c55e') => {
+        setToast({ msg, color });
+        setTimeout(() => setToast(null), 2800);
+      };
+
+      // Filtered by month/year
+      const monthTx = useMemo(() =>
+        transactions.filter(t => {
+          const d = new Date(t.date);
+          return d.getMonth() === month && d.getFullYear() === year;
+        }).sort((a, b) => new Date(b.date) - new Date(a.date)),
+        [transactions, month, year]
+      );
+
+      const totalExpense = useMemo(() => monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [monthTx]);
+      const totalIncome  = useMemo(() => monthTx.filter(t => t.type === 'income').reduce((s, t)  => s + t.amount, 0), [monthTx]);
+      const balance      = totalIncome - totalExpense;
+      const budgetPct    = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 999) : 0;
+
+      // By category (expenses only)
+      const catData = useMemo(() => {
+        const expenses = monthTx.filter(t => t.type === 'expense');
+        const total = expenses.reduce((s, t) => s + t.amount, 0) || 1;
+        return CATEGORIES.map(cat => {
+          const sum = expenses.filter(t => t.category === cat).reduce((s, t) => s + t.amount, 0);
+          return { cat, sum, pct: (sum / total) * 100 };
+        });
+      }, [monthTx]);
+
+      const displayedTx = useMemo(() => {
+        if (filter === 'all') return monthTx;
+        return monthTx.filter(t => t.type === filter);
+      }, [monthTx, filter]);
+
+      const prevMonth = () => {
+        if (month === 0) { setMonth(11); setYear(y => y - 1); }
+        else setMonth(m => m - 1);
+      };
+      const nextMonth = () => {
+        if (month === 11) { setMonth(0); setYear(y => y + 1); }
+        else setMonth(m => m + 1);
+      };
+
+      const addTx = (tx) => {
+        setTransactions(prev => [tx, ...prev]);
+        showToast('Movimiento añadido', tx.type === 'income' ? '#22c55e' : '#ef4444');
+      };
+      const deleteTx = (id) => {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        showToast('Movimiento eliminado', '#ef4444');
+      };
+
+      const handleExport = () => {
+        exportCSV(transactions, month, year);
+        showToast(`CSV exportado: ${MONTHS[month]} ${year}`);
+      };
+
+      const handleImportFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const parsed = parseCSV(ev.target.result);
+          if (parsed.length === 0) { showToast('CSV vacío o con errores', '#ef4444'); return; }
+          setTransactions(prev => {
+            const existingIds = new Set(prev.map(t => t.id));
+            const newOnes = parsed.filter(t => !existingIds.has(t.id));
+            return [...prev, ...newOnes];
+          });
+          showToast(`${parsed.length} movimientos importados`);
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      };
+
+      const filterBtn = (label, val) => (
+        <button onClick={() => setFilter(val)}
+          className="px-4 py-1.5 rounded-xl text-sm font-medium transition-all"
+          style={{
+            background: filter === val ? '#7c6dfa22' : 'transparent',
+            border: `1px solid ${filter === val ? '#7c6dfa' : '#252530'}`,
+            color: filter === val ? '#a89dfc' : '#52525e'
+          }}>
+          {label}
+        </button>
+      );
+
+      return (
+        <div className="min-h-screen" style={{ background: 'radial-gradient(ellipse at 20% 0%, #1a1233 0%, #0d0d0f 50%)' }}>
+          {/* Toast */}
+          {toast && (
+            <div className="fixed top-4 right-4 z-[100] glass rounded-xl px-4 py-3 text-sm font-medium animate-pop"
+                 style={{ borderLeft: `3px solid ${toast.color}`, color: toast.color }}>
+              {toast.msg}
+            </div>
+          )}
+
+          {/* Hidden file input */}
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
+
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
+
+            {/* ── Header ── */}
+            <header className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                     style={{ background: 'linear-gradient(135deg,#6d5dfc,#9f7aea)' }}>
+                  <WalletIcon size={18} />
+                </div>
+                <h1 className="text-xl font-black font-display tracking-tight" style={{ letterSpacing: '-0.02em' }}>
+                  ZenGastos
+                </h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={handleExport}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:bg-white/5"
+                  style={{ border: '1px solid #252530', color: '#888' }}>
+                  <DownloadIcon size={13} /> CSV
+                </button>
+                <button onClick={() => fileRef.current.click()}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:bg-white/5"
+                  style={{ border: '1px solid #252530', color: '#888' }}>
+                  <UploadIcon size={13} /> Importar
+                </button>
+              </div>
+            </header>
+
+            {/* ── Month Selector ── */}
+            <div className="glass rounded-2xl p-3 flex items-center justify-between">
+              <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-white/5 text-muted hover:text-white transition-all">
+                <ChevronLeft size={18} />
+              </button>
+              <div className="text-center">
+                <span className="font-bold font-display text-base">{MONTHS[month]}</span>
+                <span className="text-muted font-mono text-sm ml-2">{year}</span>
+              </div>
+              <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-white/5 text-muted hover:text-white transition-all">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            {/* ── Summary Cards ── */}
+            <div className="grid grid-cols-2 gap-3 summary-grid">
+              <SummaryCard label="Gastos" value={totalExpense} color="#ef4444" />
+              <SummaryCard label="Ingresos" value={totalIncome} color="#22c55e" />
+              <SummaryCard label="Balance" value={balance} color={balance >= 0 ? '#22c55e' : '#ef4444'}
+                sub={balance >= 0 ? 'Positivo este mes' : 'Déficit este mes'} />
+              <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)} prefix="" color="#7c6dfa"
+                sub={totalIncome > 0 ? `${totalExpense.toFixed(0)}€ de ${totalIncome.toFixed(0)}€` : 'Sin ingresos'} />
+            </div>
+
+            {/* ── Category Breakdown ── */}
+            <div className="glass rounded-2xl p-5">
+              <h2 className="text-xs font-display tracking-widest uppercase text-muted mb-4">Por tipo de gasto</h2>
+              <div className="space-y-4">
+                {catData.map(({ cat, sum, pct }) => (
+                  <div key={cat}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-sm font-medium" style={{ color: CATEGORY_COLORS[cat] }}>{cat}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono text-muted">{pct.toFixed(1)}%</span>
+                        <span className="text-xs font-mono font-bold">{sum.toFixed(2)}€</span>
+                      </div>
+                    </div>
+                    <div className="progress-bar">
+                      <div className="progress-fill" style={{ width: `${pct}%`, background: CATEGORY_COLORS[cat] }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Transactions ── */}
+            <div className="glass rounded-2xl p-5">
+              {/* Header row */}
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <h2 className="text-xs font-display tracking-widest uppercase text-muted">Movimientos</h2>
+                <div className="flex gap-1.5">
+                  {filterBtn('Todo', 'all')}
+                  {filterBtn('Gastos', 'expense')}
+                  {filterBtn('Ingresos', 'income')}
+                </div>
+              </div>
+
+              {/* Add buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <button onClick={() => setModal('expense')}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold font-display transition-all hover:opacity-90 active:scale-95"
+                  style={{ background: '#dc262622', border: '1px solid #dc262644', color: '#ef4444' }}>
+                  <PlusIcon size={16} /> Gasto
+                </button>
+                <button onClick={() => setModal('income')}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold font-display transition-all hover:opacity-90 active:scale-95"
+                  style={{ background: '#16a34a22', border: '1px solid #16a34a44', color: '#22c55e' }}>
+                  <PlusIcon size={16} /> Ingreso
+                </button>
+              </div>
+
+              {/* List */}
+              {displayedTx.length === 0 ? (
+                <div className="text-center py-10 text-muted">
+                  <div className="text-3xl mb-2 opacity-30">◎</div>
+                  <p className="text-sm">Sin movimientos este mes</p>
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {displayedTx.map(tx => (
+                    <TxRow key={tx.id} tx={tx} onDelete={deleteTx} />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <p className="text-center text-xs text-muted py-2 font-mono">
+              {transactions.length} movimientos en total · ZenGastos v2
+            </p>
+          </div>
+
+          {/* Modals */}
+          {modal && (
+            <AddModal
+              type={modal}
+              onSave={addTx}
+              onClose={() => setModal(null)}
+              currentMonth={month}
+              currentYear={year}
+            />
+          )}
+        </div>
+      );
+    };
+
+    // ─── Mount ────────────────────────────────────────────────────
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+    // ─── Service Worker Registration ──────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(r => console.log('SW registrado:', r.scope))
+          .catch(e => console.warn('SW error:', e));
+      });
+    }
+  </script>
+</body>
+</html>
