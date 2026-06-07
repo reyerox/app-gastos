@@ -1,135 +1,108 @@
-// ─── ZenGastos Service Worker ─────────────────────────────────
-// Estrategia: Cache-first para assets estáticos, network-first para el resto.
+// ─── ZenGastos Service Worker v2 ─────────────────────────────
+const CACHE_NAME = 'zengastos-v2';
 
-const CACHE_NAME = 'zengastos-v1';
-const CACHE_VERSION = 1;
-
-// Assets a cachear en la instalación (shell de la app)
-const PRECACHE_ASSETS = [
+const PRECACHE = [
   './',
   './index.html',
   './manifest.json',
-  // Fuentes de Google (se cachean en runtime si están disponibles)
+  './icon.png',
 ];
 
-// Assets externos que se cachean en runtime (CDNs)
-const RUNTIME_CACHE_ORIGINS = [
+const CDN_ORIGINS = [
   'https://fonts.googleapis.com',
   'https://fonts.gstatic.com',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com',
 ];
 
-// ─── Install ──────────────────────────────────────────────────
-self.addEventListener('install', (event) => {
-  console.log('[SW] Instalando ZenGastos SW v' + CACHE_VERSION);
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-cacheando assets del shell');
-      return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
+// ── Install: precache shell ───────────────────────────────────
+self.addEventListener('install', e => {
+  console.log('[SW] ZenGastos v2 — instalando');
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(PRECACHE))
+      .then(() => self.skipWaiting())
   );
 });
 
-// ─── Activate ─────────────────────────────────────────────────
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activando nueva versión');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log('[SW] Eliminando caché antigua:', name);
-            return caches.delete(name);
-          })
-      );
-    }).then(() => self.clients.claim())
+// ── Activate: clean old caches ────────────────────────────────
+self.addEventListener('activate', e => {
+  console.log('[SW] ZenGastos v2 — activando');
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => {
+          console.log('[SW] Eliminando caché antigua:', k);
+          return caches.delete(k);
+        })
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// ─── Fetch ────────────────────────────────────────────────────
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
+// ── Fetch: routing strategies ─────────────────────────────────
+self.addEventListener('fetch', e => {
+  const { request } = e;
   const url = new URL(request.url);
 
-  // Ignorar peticiones no-GET y extensiones de browser
   if (request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
+  if (url.protocol === 'blob:') return;
 
-  // Para assets del shell (misma origin) → Cache first, luego red
+  // Same origin → Cache-first (offline-capable)
   if (url.origin === self.location.origin) {
-    event.respondWith(cacheFirst(request));
+    e.respondWith(cacheFirst(request));
     return;
   }
 
-  // Para CDNs y fuentes externas → Stale while revalidate
-  const isExternalCacheable = RUNTIME_CACHE_ORIGINS.some(origin =>
-    url.href.startsWith(origin)
-  );
-
-  if (isExternalCacheable) {
-    event.respondWith(staleWhileRevalidate(request));
+  // CDN assets → Stale-while-revalidate
+  if (CDN_ORIGINS.some(o => url.href.startsWith(o))) {
+    e.respondWith(staleWhileRevalidate(request));
     return;
   }
 
-  // Para todo lo demás → Red primero, caché como fallback
-  event.respondWith(networkFirst(request));
+  // Everything else → Network-first
+  e.respondWith(networkFirst(request));
 });
 
-// ─── Estrategias de caché ─────────────────────────────────────
+// ── Strategies ────────────────────────────────────────────────
 
-async function cacheFirst(request) {
-  const cachedResponse = await caches.match(request);
-  if (cachedResponse) return cachedResponse;
-
+async function cacheFirst(req) {
+  const cached = await caches.match(req);
+  if (cached) return cached;
   try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch (error) {
-    console.warn('[SW] Cache-first falló para:', request.url);
-    return new Response('<h1>ZenGastos - Sin conexión</h1><p>Por favor, verifica tu conexión a internet.</p>', {
-      headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      status: 503,
-    });
+    const res = await fetch(req);
+    if (res.ok) (await caches.open(CACHE_NAME)).put(req, res.clone());
+    return res;
+  } catch {
+    return new Response(`
+      <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+      <title>ZenGastos — Sin conexión</title>
+      <style>body{background:#09090d;color:#e8e8f0;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;}
+      h1{font-size:1.4rem;margin-bottom:8px;}p{color:#8888a0;font-size:.9rem;}</style></head>
+      <body><div><h1>ZenGastos</h1><p>Sin conexión. Tus datos siguen guardados localmente.</p></div></body></html>
+    `, { headers: { 'Content-Type': 'text/html;charset=utf-8' }, status: 503 });
   }
 }
 
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cachedResponse = await cache.match(request);
-
-  const fetchPromise = fetch(request).then((networkResponse) => {
-    if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  }).catch(() => cachedResponse);
-
-  return cachedResponse || fetchPromise;
+async function staleWhileRevalidate(req) {
+  const cache  = await caches.open(CACHE_NAME);
+  const cached = await cache.match(req);
+  const fresh  = fetch(req).then(res => { if (res.ok) cache.put(req, res.clone()); return res; }).catch(() => cached);
+  return cached || fresh;
 }
 
-async function networkFirst(request) {
+async function networkFirst(req) {
   try {
-    const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
-    }
-    return networkResponse;
-  } catch (error) {
-    const cachedResponse = await caches.match(request);
-    return cachedResponse || new Response('Sin conexión', { status: 503 });
+    const res = await fetch(req);
+    if (res.ok) (await caches.open(CACHE_NAME)).put(req, res.clone());
+    return res;
+  } catch {
+    return await caches.match(req) || new Response('Sin conexión', { status: 503 });
   }
 }
 
-// ─── Message handling (para forzar actualización desde la UI) ─
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+// ── Message: force update ─────────────────────────────────────
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });

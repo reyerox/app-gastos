@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZenGastos</title>
   <meta name="description" content="Registro de gastos compartido para parejas" />
-  <meta name="theme-color" content="#0d0d0f" />
+  <meta name="theme-color" content="#09090d" />
   <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon.png" />
 
-  <!-- Google Fonts -->
+  <!-- Google Fonts: Instrument Serif + IBM Plex Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,600 +21,792 @@
       theme: {
         extend: {
           fontFamily: {
-            display: ['Syne', 'sans-serif'],
-            mono: ['DM Mono', 'monospace'],
+            serif:   ['Instrument Serif', 'Georgia', 'serif'],
+            mono:    ['IBM Plex Mono', 'monospace'],
+            sans:    ['Plus Jakarta Sans', 'sans-serif'],
           },
           colors: {
-            bg: {
-              base: '#0d0d0f',
-              card: '#141418',
-              elevated: '#1a1a20',
-              border: '#252530',
-            },
-            income: {
-              DEFAULT: '#22c55e',
-              muted: '#16a34a22',
-              dim: '#16a34a',
-            },
-            expense: {
-              DEFAULT: '#ef4444',
-              muted: '#dc262622',
-              dim: '#dc2626',
-            },
-            accent: '#7c6dfa',
-            muted: '#52525e',
-            subtle: '#3a3a46',
+            base:    '#09090d',
+            surface: '#111116',
+            card:    '#16161d',
+            raised:  '#1c1c25',
+            border:  '#26262f',
+            subtle:  '#32323e',
+            dim:     '#5a5a6e',
+            muted:   '#8888a0',
+            soft:    '#b8b8cc',
+            bright:  '#e8e8f0',
+            income: { DEFAULT: '#34d399', dim: '#065f46', glow: '#34d39920' },
+            spend:  { DEFAULT: '#f87171', dim: '#7f1d1d', glow: '#f8717120' },
+            accent: { DEFAULT: '#818cf8', dim: '#312e81', glow: '#818cf820' },
+            gold:   { DEFAULT: '#fbbf24', glow: '#fbbf2420' },
           },
-          keyframes: {
-            fadeIn: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-            slideIn: { '0%': { opacity: '0', transform: 'translateX(-12px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
-            pop: { '0%': { transform: 'scale(0.95)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } },
-          },
-          animation: {
-            fadeIn: 'fadeIn 0.3s ease forwards',
-            slideIn: 'slideIn 0.25s ease forwards',
-            pop: 'pop 0.2s ease forwards',
-          }
         }
       }
     }
   </script>
 
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
   <style>
-    * { box-sizing: border-box; }
-    body { background: #0d0d0f; color: #e8e8ed; font-family: 'Syne', sans-serif; min-height: 100vh; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #0d0d0f; }
-    ::-webkit-scrollbar-thumb { background: #252530; border-radius: 4px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #09090d;
+      color: #e8e8f0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #26262f; border-radius: 99px; }
+
+    /* Glass card */
     .glass {
-      background: rgba(20, 20, 24, 0.8);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(37, 37, 48, 0.8);
+      background: rgba(22, 22, 29, 0.9);
+      border: 1px solid #26262f;
+      backdrop-filter: blur(20px);
     }
 
-    .progress-bar {
-      height: 6px;
-      border-radius: 99px;
-      background: #1a1a20;
-      overflow: hidden;
+    /* Progress bar */
+    .prog-track { height: 5px; background: #1c1c25; border-radius: 99px; overflow: hidden; }
+    .prog-fill   { height: 100%; border-radius: 99px; transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+
+    /* Big progress */
+    .prog-big    { height: 8px; background: #1c1c25; border-radius: 99px; overflow: hidden; }
+    .prog-big .prog-fill { height: 100%; }
+
+    /* Animations */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideIn  { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes popIn    { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
+    @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+
+    .anim-fadeup  { animation: fadeUp  0.3s ease both; }
+    .anim-slidein { animation: slideIn 0.25s ease both; }
+    .anim-popin   { animation: popIn   0.22s ease both; }
+
+    /* Stagger delays */
+    .delay-1 { animation-delay:0.05s; }
+    .delay-2 { animation-delay:0.10s; }
+    .delay-3 { animation-delay:0.15s; }
+    .delay-4 { animation-delay:0.20s; }
+
+    /* Transaction row hover */
+    .tx-row { transition: background 0.15s; border-radius: 12px; }
+    .tx-row:hover { background: rgba(28,28,37,0.8); }
+    .tx-row:hover .del-btn { opacity: 1; }
+    .del-btn { opacity: 0; transition: opacity 0.15s; }
+
+    /* Glow button */
+    .btn-income { background: #065f4640; border: 1px solid #34d39940; color: #34d399; transition: all 0.2s; }
+    .btn-income:hover { background: #065f4660; box-shadow: 0 0 16px #34d39930; transform: translateY(-1px); }
+    .btn-spend  { background: #7f1d1d40; border: 1px solid #f8717140; color: #f87171; transition: all 0.2s; }
+    .btn-spend:hover  { background: #7f1d1d60; box-shadow: 0 0 16px #f8717130; transform: translateY(-1px); }
+
+    /* Tag chip */
+    .chip { display:inline-flex; align-items:center; padding: 1px 8px; border-radius: 99px; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:500; letter-spacing:0.04em; }
+
+    /* Modal overlay */
+    .modal-bg { animation: fadeUp 0.18s ease; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); }
+    .modal-panel { animation: popIn 0.22s ease; }
+
+    /* Form input */
+    .f-input {
+      width:100%; background:#1c1c25; border:1px solid #26262f; border-radius:10px;
+      padding:10px 14px; font-size:14px; font-family:inherit; color:#e8e8f0;
+      outline:none; transition:border-color 0.2s;
     }
-    .progress-fill {
-      height: 100%;
-      border-radius: 99px;
-      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    .f-input:focus { border-color: #818cf8; }
+    .f-label { font-size:11px; color:#8888a0; text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:6px; display:block; }
+
+    /* Segment control */
+    .seg-wrap { display:flex; background:#1c1c25; border:1px solid #26262f; border-radius:10px; padding:3px; gap:2px; }
+    .seg-btn { flex:1; padding:6px; border-radius:8px; font-size:12px; font-weight:600; text-align:center; cursor:pointer; transition:all 0.18s; color:#8888a0; }
+    .seg-btn.active { background:#26262f; color:#e8e8f0; }
+
+    /* Toast */
+    .toast { animation: popIn 0.2s ease; }
+
+    /* Noise texture overlay */
+    body::before {
+      content:'';
+      position:fixed; inset:0; pointer-events:none; z-index:0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      opacity: 0.4;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #6d5dfc, #9f7aea);
-      transition: all 0.2s ease;
+    /* Ensure content above noise */
+    #root { position: relative; z-index: 1; }
+
+    @media (max-width: 1023px) {
+      .two-col { grid-template-columns: 1fr !important; }
     }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124, 109, 250, 0.4); }
-    .btn-primary:active { transform: translateY(0); }
-
-    .modal-overlay {
-      animation: fadeIn 0.2s ease forwards;
-    }
-    .modal-box {
-      animation: pop 0.22s ease forwards;
-    }
-
-    .tx-row {
-      animation: slideIn 0.2s ease forwards;
-      transition: background 0.15s ease;
-    }
-    .tx-row:hover { background: rgba(26, 26, 32, 0.7); }
-
-    .chip {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 99px;
-      letter-spacing: 0.03em;
-    }
-
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-    .nav-dot { transition: all 0.2s ease; }
-
     @media (max-width: 640px) {
-      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .summary-4 { grid-template-columns: repeat(2, 1fr) !important; }
+      .cat-4     { grid-template-columns: repeat(2, 1fr) !important; }
     }
   </style>
 
-  <!-- React + ReactDOM via CDN -->
+  <!-- React + ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel for JSX transpilation in browser -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useCallback, useMemo, useRef } = React;
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
-    // ─── Constants ───────────────────────────────────────────────
-    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const CATEGORIES = ['Obligatorios', 'Opcionales', 'Ocio', 'Otros'];
-    const CATEGORY_COLORS = {
-      'Obligatorios': '#7c6dfa',
-      'Opcionales':   '#f59e0b',
-      'Ocio':         '#22c55e',
-      'Otros':        '#64748b',
+// ══════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════
+const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const TIPOS     = ['Obligatorios','Opcionales','Ocio','Otros'];
+const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Otros:'#94a3b8' };
+const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Otros:'#94a3b815' };
+const USERS     = ['Tú','Tu pareja'];
+
+const KEYS = {
+  TX:      'zg_transactions',
+  BUDGET:  'zg_budgets',    // { "2026-06": 1500 }
+  GOALS:   'zg_goals',
+};
+
+const genId   = () => `${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+const ls      = (k, fb=[]) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fb; } catch { return fb; } };
+const lsSet   = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const fmtEur  = (n) => n.toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+const clamp   = (n,lo,hi) => Math.max(lo, Math.min(hi, n));
+
+// ══════════════════════════════════════════════
+//  CSV
+// ══════════════════════════════════════════════
+const CSV_HDR = ['id','date','type','concept','amount','tipo','paidBy'];
+
+function exportCSV(txs, month, year) {
+  const rows = txs
+    .filter(t => { const d=new Date(t.date); return d.getMonth()===month && d.getFullYear()===year; })
+    .sort((a,b) => new Date(a.date)-new Date(b.date));
+  const lines = [CSV_HDR.join(','), ...rows.map(t =>
+    [t.id, t.date, t.type, `"${(t.concept||'').replace(/"/g,'""')}"`, t.amount, t.tipo, t.paidBy].join(',')
+  )];
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`ZenGastos_${MONTHS[month]}_${year}.csv` });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const hdrs = lines[0].split(',').map(s=>s.trim());
+  const idx  = k => hdrs.indexOf(k);
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur='', inQ=false;
+    for (const ch of line+',') {
+      if (ch==='"') inQ=!inQ;
+      else if (ch===',' && !inQ) { cols.push(cur.trim()); cur=''; }
+      else cur+=ch;
+    }
+    const t = {
+      id:      cols[idx('id')]     || genId(),
+      date:    cols[idx('date')]   || new Date().toISOString().slice(0,10),
+      type:    cols[idx('type')]   || 'expense',
+      concept: cols[idx('concept')]|| '',
+      amount:  parseFloat(cols[idx('amount')]) || 0,
+      tipo:    cols[idx('tipo')]   || 'Otros',
+      paidBy:  cols[idx('paidBy')] || USERS[0],
     };
-    const STORAGE_KEY = 'zengastos_transactions';
-    const USER_A = 'Usuario A';
-    const USER_B = 'Usuario B';
+    return t.amount > 0 ? t : null;
+  }).filter(Boolean);
+}
 
-    const genId = () => `tx_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+// ══════════════════════════════════════════════
+//  SMALL COMPONENTS
+// ══════════════════════════════════════════════
 
-    // ─── LocalStorage helpers ────────────────────────────────────
-    const loadTx = () => {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-      catch { return []; }
-    };
-    const saveTx = (txs) => localStorage.setItem(STORAGE_KEY, JSON.stringify(txs));
+// Lucide icon wrapper
+function LI({ name, size=16, className='' }) {
+  const ref = useRef();
+  useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const svg = lucide.createElement(lucide[name.replace(/-./g, x=>x[1].toUpperCase())]);
+      if (svg) { svg.setAttribute('width',size); svg.setAttribute('height',size); ref.current.appendChild(svg); }
+    }
+  }, [name, size]);
+  return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} />;
+}
 
-    // ─── CSV helpers ─────────────────────────────────────────────
-    const CSV_HEADERS = ['id','date','type','concept','amount','category','paidBy'];
+function Toast({ msg, color }) {
+  return (
+    <div className="toast fixed top-5 right-5 z-[200] flex items-center gap-2 px-4 py-3 rounded-xl glass shadow-2xl text-sm font-semibold"
+         style={{ borderLeft:`3px solid ${color}`, color }}>
+      {msg}
+    </div>
+  );
+}
 
-    const exportCSV = (transactions, month, year) => {
-      const filtered = transactions.filter(t => {
-        const d = new Date(t.date);
-        return d.getMonth() === month && d.getFullYear() === year;
-      });
-      const sorted = [...filtered].sort((a,b) => new Date(a.date) - new Date(b.date));
-      const rows = [CSV_HEADERS.join(',')];
-      for (const t of sorted) {
-        rows.push([t.id, t.date, t.type, `"${t.concept.replace(/"/g,'""')}"`, t.amount, t.category, t.paidBy].join(','));
-      }
-      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ZenGastos_${MONTHS[month]}_${year}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-    };
+function Modal({ title, onClose, children, wide=false }) {
+  return (
+    <div className="modal-bg fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className={`modal-panel glass rounded-2xl w-full ${wide?'max-w-lg':'max-w-md'} max-h-[92vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+          <h2 className="font-serif text-lg italic">{title}</h2>
+          <button onClick={onClose} className="text-dim hover:text-bright transition-colors p-1.5 rounded-lg hover:bg-raised">
+            <LI name="X" size={18}/>
+          </button>
+        </div>
+        <div className="p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
 
-    const parseCSV = (text) => {
-      const lines = text.trim().split('\n');
-      if (lines.length < 2) return [];
-      const headers = lines[0].split(',').map(h => h.trim());
-      const idxOf = (k) => headers.indexOf(k);
-      const result = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || lines[i].split(',');
-        const clean = cols.map(c => c ? c.replace(/^"|"$/g,'').replace(/""/g,'"').trim() : '');
-        const t = {
-          id:       clean[idxOf('id')]       || genId(),
-          date:     clean[idxOf('date')]      || new Date().toISOString().slice(0,10),
-          type:     clean[idxOf('type')]      || 'expense',
-          concept:  clean[idxOf('concept')]   || 'Sin concepto',
-          amount:   parseFloat(clean[idxOf('amount')]) || 0,
-          category: clean[idxOf('category')] || 'Otros',
-          paidBy:   clean[idxOf('paidBy')]   || USER_A,
-        };
-        if (t.amount > 0) result.push(t);
-      }
-      return result;
-    };
+function ProgBar({ pct, color, big=false }) {
+  const cl = big ? 'prog-big' : 'prog-track';
+  return (
+    <div className={cl}>
+      <div className="prog-fill" style={{ width:`${clamp(pct,0,100)}%`, background:color }}/>
+    </div>
+  );
+}
 
-    // ─── Icons (inline SVG components) ──────────────────────────
-    const Icon = ({ d, size = 18, className = '' }) => (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d={d} />
-      </svg>
-    );
+function SummaryCard({ label, value, color, sub, icon, delay='' }) {
+  return (
+    <div className={`glass rounded-2xl p-4 flex flex-col gap-1.5 anim-fadeup ${delay}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim">{label}</span>
+        {icon && <span className="text-dim">{icon}</span>}
+      </div>
+      <span className="font-mono text-xl font-semibold" style={{color}}>{value}</span>
+      {sub && <span className="text-[11px] text-dim">{sub}</span>}
+    </div>
+  );
+}
 
-    const ChevronLeft  = ({ size }) => <Icon size={size} d="M15 18l-6-6 6-6" />;
-    const ChevronRight = ({ size }) => <Icon size={size} d="M9 18l6-6-6-6" />;
-    const PlusIcon     = ({ size }) => <Icon size={size} d="M12 5v14M5 12h14" />;
-    const TrashIcon    = ({ size }) => <Icon size={size} d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />;
-    const DownloadIcon = ({ size }) => <Icon size={size} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />;
-    const UploadIcon   = ({ size }) => <Icon size={size} d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
-    const XIcon        = ({ size }) => <Icon size={size} d="M18 6L6 18M6 6l12 12" />;
-    const WalletIcon   = ({ size }) => <Icon size={size} d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 14a2 2 0 100-4 2 2 0 000 4z" />;
+// ══════════════════════════════════════════════
+//  ADD TRANSACTION MODAL
+// ══════════════════════════════════════════════
+function AddTxModal({ type, onSave, onClose, month, year }) {
+  const today = new Date();
+  const defDate = new Date(year, month, year===today.getFullYear()&&month===today.getMonth() ? today.getDate() : 1)
+    .toISOString().slice(0,10);
+  const [f, setF] = useState({ concept:'', amount:'', tipo:TIPOS[0], paidBy:USERS[0], date:defDate });
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const isIncome = type === 'income';
 
-    // ─── Modal component ─────────────────────────────────────────
-    const Modal = ({ title, onClose, children }) => (
-      <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
-        <div className="modal-box glass rounded-2xl w-full max-w-md p-6" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold font-display">{title}</h2>
-            <button onClick={onClose} className="text-muted hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
-              <XIcon size={20} />
-            </button>
+  const save = () => {
+    if (!f.concept.trim() || parseFloat(f.amount)<=0) return;
+    onSave({ id:genId(), date:f.date, type, concept:f.concept.trim(),
+              amount:parseFloat(parseFloat(f.amount).toFixed(2)), tipo:f.tipo, paidBy:f.paidBy });
+    onClose();
+  };
+
+  return (
+    <Modal title={isIncome ? 'Nuevo ingreso' : 'Nuevo gasto'} onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <label className="f-label">Fecha</label>
+          <input type="date" className="f-input" value={f.date} onChange={e=>set('date',e.target.value)} style={{colorScheme:'dark'}}/>
+        </div>
+        <div>
+          <label className="f-label">Concepto</label>
+          <input type="text" className="f-input" placeholder="Supermercado, Netflix..." value={f.concept} onChange={e=>set('concept',e.target.value)}/>
+        </div>
+        <div>
+          <label className="f-label">Cantidad (€)</label>
+          <input type="number" step="0.01" min="0.01" className="f-input" placeholder="0.00" value={f.amount} onChange={e=>set('amount',e.target.value)}/>
+        </div>
+        <div>
+          <label className="f-label">Tipo</label>
+          <select className="f-input" value={f.tipo} onChange={e=>set('tipo',e.target.value)} style={{colorScheme:'dark'}}>
+            {TIPOS.map(t=><option key={t}>{t}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="f-label">¿Quién paga?</label>
+          <div className="grid grid-cols-2 gap-2">
+            {USERS.map(u=>(
+              <button key={u} onClick={()=>set('paidBy',u)}
+                className="py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ background: f.paidBy===u?'#818cf820':'#1c1c25', border:`1px solid ${f.paidBy===u?'#818cf8':'#26262f'}`, color: f.paidBy===u?'#a5b4fc':'#8888a0' }}>
+                {u}
+              </button>
+            ))}
           </div>
-          {children}
+        </div>
+        <button onClick={save}
+          className="w-full py-3 rounded-xl text-sm font-bold transition-all mt-1"
+          style={{ background: isIncome?'#065f4640':'#7f1d1d40', border:`1px solid ${isIncome?'#34d39960':'#f8717160'}`, color: isIncome?'#34d399':'#f87171' }}>
+          Guardar {isIncome?'ingreso':'gasto'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  TRANSACTION ROW
+// ══════════════════════════════════════════════
+function TxRow({ tx, onDelete }) {
+  const isIn = tx.type==='income';
+  const clr  = isIn ? '#34d399' : '#f87171';
+  const bg   = isIn ? '#34d39918' : '#f8717118';
+  const dateStr = new Date(tx.date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+  return (
+    <div className="tx-row flex items-center gap-3 px-3 py-2.5 anim-slidein">
+      <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style={{background:bg}}>
+        <span style={{color:clr, fontSize:14}}>{isIn?'↑':'↓'}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-semibold text-bright truncate">{tx.concept}</span>
+          <span className="chip" style={{background:TIPO_BG[tx.tipo]||'#26262f', color:TIPO_CLR[tx.tipo]||'#888'}}>
+            {tx.tipo}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[11px] text-dim font-mono">{dateStr}</span>
+          <span className="text-dim text-[10px]">·</span>
+          <span className="text-[11px]" style={{color:'#818cf8'}}>{tx.paidBy}</span>
         </div>
       </div>
-    );
-
-    // ─── Summary Card ────────────────────────────────────────────
-    const SummaryCard = ({ label, value, color, prefix = '€', sub }) => (
-      <div className="glass rounded-2xl p-4 flex flex-col gap-1">
-        <span className="text-xs text-muted font-display tracking-widest uppercase">{label}</span>
-        <span className="text-2xl font-bold font-mono" style={{ color }}>
-          {prefix}{typeof value === 'number' ? value.toFixed(2) : value}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <span className="font-mono text-sm font-semibold" style={{color:clr}}>
+          {isIn?'+':'-'}{fmtEur(tx.amount)}
         </span>
-        {sub && <span className="text-xs text-muted">{sub}</span>}
+        <button className="del-btn text-dim hover:text-spend p-1 rounded-lg hover:bg-spend/10 transition-colors" onClick={()=>onDelete(tx.id)}>
+          <LI name="Trash2" size={13}/>
+        </button>
       </div>
-    );
+    </div>
+  );
+}
 
-    // ─── Transaction Row ─────────────────────────────────────────
-    const TxRow = ({ tx, onDelete }) => {
-      const isIncome = tx.type === 'income';
-      return (
-        <div className="tx-row flex items-center gap-3 px-4 py-3 rounded-xl group">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-               style={{ background: isIncome ? '#16a34a22' : '#dc262622' }}>
-            <span style={{ color: isIncome ? '#22c55e' : '#ef4444', fontSize: 16 }}>
-              {isIncome ? '↑' : '↓'}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm truncate">{tx.concept}</span>
-              <span className="chip" style={{ background: CATEGORY_COLORS[tx.category] + '22', color: CATEGORY_COLORS[tx.category] }}>
-                {tx.category}
-              </span>
+// ══════════════════════════════════════════════
+//  WIDGET: MONTHLY BUDGET
+// ══════════════════════════════════════════════
+function BudgetWidget({ monthKey, totalSpent }) {
+  const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState('');
+
+  const budget = budgets[monthKey] || 0;
+  const pct    = budget > 0 ? (totalSpent/budget)*100 : 0;
+  const over   = pct > 100;
+  const barClr = over ? '#f87171' : pct>80 ? '#fbbf24' : '#34d399';
+
+  const save = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v>0) {
+      const next = {...budgets,[monthKey]:v};
+      setBudgets(next); lsSet(KEYS.BUDGET,next);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <div className="glass rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-1.5">
+          <LI name="Target" size={12}/> Presupuesto mensual
+        </span>
+        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
+          className="text-[11px] font-semibold text-accent hover:text-indigo-300 transition-colors flex items-center gap-1">
+          <LI name="Pencil" size={11}/> {budget>0?'Editar':'Establecer'}
+        </button>
+      </div>
+
+      {budget > 0 ? (
+        <>
+          <div className="flex justify-between items-end">
+            <div>
+              <div className="font-mono text-xl font-semibold" style={{color:barClr}}>{fmtEur(totalSpent)}</div>
+              <div className="text-[11px] text-dim mt-0.5">de {fmtEur(budget)} presupuestados</div>
             </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-muted">{new Date(tx.date + 'T00:00:00').toLocaleDateString('es-ES', { day:'2-digit', month:'short' })}</span>
-              <span className="text-xs text-muted">·</span>
-              <span className="text-xs" style={{ color: '#7c6dfa' }}>{tx.paidBy}</span>
-            </div>
+            <div className="font-mono text-sm font-bold" style={{color:barClr}}>{pct.toFixed(1)}%</div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-bold font-mono text-sm" style={{ color: isIncome ? '#22c55e' : '#ef4444' }}>
-              {isIncome ? '+' : '-'}{tx.amount.toFixed(2)}€
-            </span>
-            <button onClick={() => onDelete(tx.id)}
-              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-expense p-1 rounded-lg hover:bg-expense/10">
-              <TrashIcon size={15} />
-            </button>
-          </div>
-        </div>
-      );
-    };
+          <ProgBar pct={pct} color={barClr} big/>
+          {over && <p className="text-[11px] font-semibold text-spend flex items-center gap-1"><LI name="AlertTriangle" size={12}/>¡Has superado el presupuesto!</p>}
+        </>
+      ) : (
+        <p className="text-sm text-dim text-center py-4">Sin presupuesto definido para este mes.</p>
+      )}
 
-    // ─── Add Transaction Modal ────────────────────────────────────
-    const AddModal = ({ type, onSave, onClose, currentMonth, currentYear }) => {
-      const isIncome = type === 'income';
-      const today = new Date();
-      const defaultDate = new Date(currentYear, currentMonth, today.getDate() <= new Date(currentYear, currentMonth+1, 0).getDate()
-        ? (currentYear === today.getFullYear() && currentMonth === today.getMonth() ? today.getDate() : 1)
-        : 1).toISOString().slice(0, 10);
-
-      const [form, setForm] = useState({
-        concept: '', amount: '', category: CATEGORIES[0], paidBy: USER_A, date: defaultDate
-      });
-
-      const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-      const inputClass = "w-full bg-bg-elevated border border-bg-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-accent transition-colors font-display";
-      const labelClass = "block text-xs text-muted mb-1.5 font-display tracking-wide uppercase";
-
-      const handleSave = () => {
-        if (!form.concept.trim() || !form.amount || parseFloat(form.amount) <= 0) return;
-        onSave({
-          id: genId(),
-          date: form.date,
-          type,
-          concept: form.concept.trim(),
-          amount: parseFloat(parseFloat(form.amount).toFixed(2)),
-          category: form.category,
-          paidBy: form.paidBy,
-        });
-        onClose();
-      };
-
-      return (
-        <Modal title={isIncome ? '+ Nuevo Ingreso' : '+ Nuevo Gasto'} onClose={onClose}>
+      {editing && (
+        <Modal title="Presupuesto mensual" onClose={()=>setEditing(false)}>
           <div className="space-y-4">
             <div>
-              <label className={labelClass}>Fecha</label>
-              <input type="date" className={inputClass} value={form.date} onChange={e => set('date', e.target.value)} style={{ colorScheme: 'dark' }} />
+              <label className="f-label">Límite de gasto (€)</label>
+              <input type="number" min="1" step="10" className="f-input" placeholder="1500.00"
+                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
             </div>
-            <div>
-              <label className={labelClass}>Concepto</label>
-              <input type="text" className={inputClass} placeholder="Ej: Supermercado, Netflix..." value={form.concept} onChange={e => set('concept', e.target.value)} />
-            </div>
-            <div>
-              <label className={labelClass}>Cantidad (€)</label>
-              <input type="number" step="0.01" min="0" className={inputClass} placeholder="0.00" value={form.amount} onChange={e => set('amount', e.target.value)} />
-            </div>
-            <div>
-              <label className={labelClass}>Categoría</label>
-              <select className={inputClass} value={form.category} onChange={e => set('category', e.target.value)} style={{ colorScheme: 'dark' }}>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>¿Quién ha pagado?</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[USER_A, USER_B].map(u => (
-                  <button key={u} onClick={() => set('paidBy', u)}
-                    className="py-2.5 rounded-xl text-sm font-medium transition-all"
-                    style={{
-                      background: form.paidBy === u ? '#7c6dfa22' : '#1a1a20',
-                      border: `1px solid ${form.paidBy === u ? '#7c6dfa' : '#252530'}`,
-                      color: form.paidBy === u ? '#a89dfc' : '#888'
-                    }}>
-                    {u}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button onClick={handleSave}
-              className="btn-primary w-full py-3 rounded-xl text-sm font-bold font-display tracking-wide mt-2"
-              style={{ color: '#fff' }}>
-              Guardar {isIncome ? 'Ingreso' : 'Gasto'}
+            <button onClick={save} className="w-full py-3 rounded-xl text-sm font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all">
+              Guardar presupuesto
             </button>
           </div>
         </Modal>
-      );
-    };
+      )}
+    </div>
+  );
+}
 
-    // ─── Main App ─────────────────────────────────────────────────
-    const App = () => {
-      const now = new Date();
-      const [transactions, setTransactions] = useState(loadTx);
-      const [month, setMonth] = useState(now.getMonth());
-      const [year, setYear]   = useState(now.getFullYear());
-      const [filter, setFilter] = useState('all'); // all | expense | income
-      const [modal, setModal]   = useState(null);   // null | 'expense' | 'income'
-      const [toast, setToast]   = useState(null);
-      const fileRef = useRef();
+// ══════════════════════════════════════════════
+//  WIDGET: BY CATEGORY
+// ══════════════════════════════════════════════
+function CategoryWidget({ monthTx }) {
+  const expenses = monthTx.filter(t=>t.type==='expense');
+  const total    = expenses.reduce((s,t)=>s+t.amount,0)||1;
+  const data     = TIPOS.map(tipo=>{
+    const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
+    return { tipo, sum, pct:(sum/total)*100 };
+  }).filter(d=>d.sum>0).sort((a,b)=>b.sum-a.sum);
 
-      useEffect(() => saveTx(transactions), [transactions]);
-
-      const showToast = (msg, color = '#22c55e') => {
-        setToast({ msg, color });
-        setTimeout(() => setToast(null), 2800);
-      };
-
-      // Filtered by month/year
-      const monthTx = useMemo(() =>
-        transactions.filter(t => {
-          const d = new Date(t.date);
-          return d.getMonth() === month && d.getFullYear() === year;
-        }).sort((a, b) => new Date(b.date) - new Date(a.date)),
-        [transactions, month, year]
-      );
-
-      const totalExpense = useMemo(() => monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0), [monthTx]);
-      const totalIncome  = useMemo(() => monthTx.filter(t => t.type === 'income').reduce((s, t)  => s + t.amount, 0), [monthTx]);
-      const balance      = totalIncome - totalExpense;
-      const budgetPct    = totalIncome > 0 ? Math.min((totalExpense / totalIncome) * 100, 999) : 0;
-
-      // By category (expenses only)
-      const catData = useMemo(() => {
-        const expenses = monthTx.filter(t => t.type === 'expense');
-        const total = expenses.reduce((s, t) => s + t.amount, 0) || 1;
-        return CATEGORIES.map(cat => {
-          const sum = expenses.filter(t => t.category === cat).reduce((s, t) => s + t.amount, 0);
-          return { cat, sum, pct: (sum / total) * 100 };
-        });
-      }, [monthTx]);
-
-      const displayedTx = useMemo(() => {
-        if (filter === 'all') return monthTx;
-        return monthTx.filter(t => t.type === filter);
-      }, [monthTx, filter]);
-
-      const prevMonth = () => {
-        if (month === 0) { setMonth(11); setYear(y => y - 1); }
-        else setMonth(m => m - 1);
-      };
-      const nextMonth = () => {
-        if (month === 11) { setMonth(0); setYear(y => y + 1); }
-        else setMonth(m => m + 1);
-      };
-
-      const addTx = (tx) => {
-        setTransactions(prev => [tx, ...prev]);
-        showToast('Movimiento añadido', tx.type === 'income' ? '#22c55e' : '#ef4444');
-      };
-      const deleteTx = (id) => {
-        setTransactions(prev => prev.filter(t => t.id !== id));
-        showToast('Movimiento eliminado', '#ef4444');
-      };
-
-      const handleExport = () => {
-        exportCSV(transactions, month, year);
-        showToast(`CSV exportado: ${MONTHS[month]} ${year}`);
-      };
-
-      const handleImportFile = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const parsed = parseCSV(ev.target.result);
-          if (parsed.length === 0) { showToast('CSV vacío o con errores', '#ef4444'); return; }
-          setTransactions(prev => {
-            const existingIds = new Set(prev.map(t => t.id));
-            const newOnes = parsed.filter(t => !existingIds.has(t.id));
-            return [...prev, ...newOnes];
-          });
-          showToast(`${parsed.length} movimientos importados`);
-        };
-        reader.readAsText(file);
-        e.target.value = '';
-      };
-
-      const filterBtn = (label, val) => (
-        <button onClick={() => setFilter(val)}
-          className="px-4 py-1.5 rounded-xl text-sm font-medium transition-all"
-          style={{
-            background: filter === val ? '#7c6dfa22' : 'transparent',
-            border: `1px solid ${filter === val ? '#7c6dfa' : '#252530'}`,
-            color: filter === val ? '#a89dfc' : '#52525e'
-          }}>
-          {label}
-        </button>
-      );
-
-      return (
-        <div className="min-h-screen" style={{ background: 'radial-gradient(ellipse at 20% 0%, #1a1233 0%, #0d0d0f 50%)' }}>
-          {/* Toast */}
-          {toast && (
-            <div className="fixed top-4 right-4 z-[100] glass rounded-xl px-4 py-3 text-sm font-medium animate-pop"
-                 style={{ borderLeft: `3px solid ${toast.color}`, color: toast.color }}>
-              {toast.msg}
-            </div>
-          )}
-
-          {/* Hidden file input */}
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImportFile} />
-
-          <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-
-            {/* ── Header ── */}
-            <header className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                     style={{ background: 'linear-gradient(135deg,#6d5dfc,#9f7aea)' }}>
-                  <WalletIcon size={18} />
+  return (
+    <div className="glass rounded-2xl p-5 space-y-4">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-1.5">
+        <LI name="PieChart" size={12}/> Por categoría
+      </span>
+      {data.length===0
+        ? <p className="text-sm text-dim text-center py-4">Sin gastos este mes.</p>
+        : <div className="space-y-3">
+            {data.map(({ tipo, sum, pct })=>(
+              <div key={tipo}>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+                  <div className="flex gap-2 items-center">
+                    <span className="font-mono text-[11px] text-dim">{pct.toFixed(1)}%</span>
+                    <span className="font-mono text-[11px] font-semibold text-bright">{fmtEur(sum)}</span>
+                  </div>
                 </div>
-                <h1 className="text-xl font-black font-display tracking-tight" style={{ letterSpacing: '-0.02em' }}>
-                  ZenGastos
-                </h1>
+                <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={handleExport}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:bg-white/5"
-                  style={{ border: '1px solid #252530', color: '#888' }}>
-                  <DownloadIcon size={13} /> CSV
-                </button>
-                <button onClick={() => fileRef.current.click()}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all hover:bg-white/5"
-                  style={{ border: '1px solid #252530', color: '#888' }}>
-                  <UploadIcon size={13} /> Importar
-                </button>
-              </div>
-            </header>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
 
-            {/* ── Month Selector ── */}
-            <div className="glass rounded-2xl p-3 flex items-center justify-between">
-              <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-white/5 text-muted hover:text-white transition-all">
-                <ChevronLeft size={18} />
-              </button>
-              <div className="text-center">
-                <span className="font-bold font-display text-base">{MONTHS[month]}</span>
-                <span className="text-muted font-mono text-sm ml-2">{year}</span>
-              </div>
-              <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-white/5 text-muted hover:text-white transition-all">
-                <ChevronRight size={18} />
-              </button>
-            </div>
+// ══════════════════════════════════════════════
+//  WIDGET: SAVINGS GOALS
+// ══════════════════════════════════════════════
+function GoalsWidget() {
+  const [goals, setGoals]   = useState(()=>ls(KEYS.GOALS,[]));
+  const [newModal, setNew]  = useState(false);
+  const [addModal, setAdd]  = useState(null); // goal id
+  const [nf, setNf]         = useState({ name:'', target:'', saved:'' });
+  const [addAmt, setAddAmt] = useState('');
 
-            {/* ── Summary Cards ── */}
-            <div className="grid grid-cols-2 gap-3 summary-grid">
-              <SummaryCard label="Gastos" value={totalExpense} color="#ef4444" />
-              <SummaryCard label="Ingresos" value={totalIncome} color="#22c55e" />
-              <SummaryCard label="Balance" value={balance} color={balance >= 0 ? '#22c55e' : '#ef4444'}
-                sub={balance >= 0 ? 'Positivo este mes' : 'Déficit este mes'} />
-              <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)} prefix="" color="#7c6dfa"
-                sub={totalIncome > 0 ? `${totalExpense.toFixed(0)}€ de ${totalIncome.toFixed(0)}€` : 'Sin ingresos'} />
-            </div>
+  const persist = (g) => { setGoals(g); lsSet(KEYS.GOALS,g); };
 
-            {/* ── Category Breakdown ── */}
-            <div className="glass rounded-2xl p-5">
-              <h2 className="text-xs font-display tracking-widest uppercase text-muted mb-4">Por tipo de gasto</h2>
-              <div className="space-y-4">
-                {catData.map(({ cat, sum, pct }) => (
-                  <div key={cat}>
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-sm font-medium" style={{ color: CATEGORY_COLORS[cat] }}>{cat}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted">{pct.toFixed(1)}%</span>
-                        <span className="text-xs font-mono font-bold">{sum.toFixed(2)}€</span>
+  const createGoal = () => {
+    const t=parseFloat(nf.target), s=parseFloat(nf.saved)||0;
+    if (!nf.name.trim()||isNaN(t)||t<=0) return;
+    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s }]);
+    setNf({name:'',target:'',saved:''}); setNew(false);
+  };
+
+  const addToGoal = (id) => {
+    const v=parseFloat(addAmt); if(isNaN(v)||v<=0) return;
+    persist(goals.map(g=>g.id===id?{...g,saved:Math.min(g.saved+v,g.target)}:g));
+    setAddAmt(''); setAdd(null);
+  };
+
+  const deleteGoal = (id) => persist(goals.filter(g=>g.id!==id));
+
+  return (
+    <div className="glass rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-1.5">
+          <LI name="Star" size={12}/> Metas de ahorro
+        </span>
+        <button onClick={()=>setNew(true)} className="text-[11px] font-semibold text-gold hover:text-yellow-200 transition-colors flex items-center gap-1">
+          <LI name="Plus" size={11}/> Nueva
+        </button>
+      </div>
+
+      {goals.length===0
+        ? <p className="text-sm text-dim text-center py-4">Sin metas todavía. ¡Crea tu primera!</p>
+        : <div className="space-y-4">
+            {goals.map(g=>{
+              const pct=(g.saved/g.target)*100;
+              const done=pct>=100;
+              const clr=done?'#34d399':pct>50?'#fbbf24':'#818cf8';
+              return (
+                <div key={g.id} className="space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-sm text-bright flex items-center gap-1.5">
+                        {done && <span style={{color:'#34d399'}}>✓</span>}
+                        {g.name}
                       </div>
+                      <div className="font-mono text-[11px] text-dim">{fmtEur(g.saved)} / {fmtEur(g.target)}</div>
                     </div>
-                    <div className="progress-bar">
-                      <div className="progress-fill" style={{ width: `${pct}%`, background: CATEGORY_COLORS[cat] }} />
+                    <div className="flex items-center gap-1">
+                      {!done && (
+                        <button onClick={()=>{setAdd(g.id);setAddAmt('');}}
+                          className="text-[11px] font-semibold px-2 py-1 rounded-lg transition-all"
+                          style={{background:'#818cf820',color:'#818cf8',border:'1px solid #818cf840'}}>
+                          +
+                        </button>
+                      )}
+                      <button onClick={()=>deleteGoal(g.id)} className="text-dim hover:text-spend p-1 rounded-lg hover:bg-spend/10 transition-colors">
+                        <LI name="Trash2" size={12}/>
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <ProgBar pct={pct} color={clr}/>
+                  <div className="font-mono text-[10px] text-right" style={{color:clr}}>{pct.toFixed(1)}%</div>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {/* New goal modal */}
+      {newModal && (
+        <Modal title="Nueva meta de ahorro" onClose={()=>setNew(false)}>
+          <div className="space-y-4">
+            <div><label className="f-label">Nombre de la meta</label>
+              <input type="text" className="f-input" placeholder="Ej: Viaje a Japón" value={nf.name} onChange={e=>setNf(p=>({...p,name:e.target.value}))} autoFocus/></div>
+            <div><label className="f-label">Objetivo (€)</label>
+              <input type="number" min="1" step="10" className="f-input" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
+            <div><label className="f-label">Ya ahorrado (€, opcional)</label>
+              <input type="number" min="0" step="10" className="f-input" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
+            <button onClick={createGoal} className="w-full py-3 rounded-xl text-sm font-bold bg-gold/20 border border-gold/40 text-gold hover:bg-gold/30 transition-all">
+              Crear meta
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add money modal */}
+      {addModal && (
+        <Modal title="Añadir ahorro" onClose={()=>setAdd(null)}>
+          <div className="space-y-4">
+            <p className="text-sm text-dim">¿Cuánto añades a la meta <span className="text-bright font-semibold">"{goals.find(g=>g.id===addModal)?.name}"</span>?</p>
+            <div><label className="f-label">Cantidad (€)</label>
+              <input type="number" min="1" step="10" className="f-input" placeholder="100.00" value={addAmt} onChange={e=>setAddAmt(e.target.value)} autoFocus/></div>
+            <button onClick={()=>addToGoal(addModal)} className="w-full py-3 rounded-xl text-sm font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all">
+              Añadir dinero
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  MAIN APP
+// ══════════════════════════════════════════════
+function App() {
+  const now = new Date();
+  const [txs, setTxs]       = useState(()=>ls(KEYS.TX,[]));
+  const [month, setMonth]   = useState(now.getMonth());
+  const [year, setYear]     = useState(now.getFullYear());
+  const [filter, setFilter] = useState('all');
+  const [addModal, setAdd]  = useState(null); // 'income' | 'expense' | null
+  const [toast, setToast]   = useState(null);
+  const fileRef             = useRef();
+
+  // Persist
+  useEffect(()=>lsSet(KEYS.TX,txs),[txs]);
+
+  const showToast = (msg, color='#34d399') => {
+    setToast({msg,color}); setTimeout(()=>setToast(null),2600);
+  };
+
+  // Month key for budget storage
+  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+
+  // Month transactions
+  const monthTx = useMemo(()=>
+    txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===month&&d.getFullYear()===year;})
+       .sort((a,b)=>new Date(b.date)-new Date(a.date))
+  ,[txs,month,year]);
+
+  const totalSpend  = useMemo(()=>monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),[monthTx]);
+  const totalIncome = useMemo(()=>monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),[monthTx]);
+  const balance     = totalIncome-totalSpend;
+  const budgetPct   = totalIncome>0 ? (totalSpend/totalIncome)*100 : 0;
+
+  // Tipo breakdown (expenses)
+  const tipoData = useMemo(()=>{
+    const exp=monthTx.filter(t=>t.type==='expense'), tot=exp.reduce((s,t)=>s+t.amount,0)||1;
+    return TIPOS.map(tipo=>({ tipo, sum:exp.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0), pct:0 }))
+                .map(d=>({...d,pct:(d.sum/tot)*100}));
+  },[monthTx]);
+
+  // Filtered display
+  const displayTx = useMemo(()=>filter==='all'?monthTx:monthTx.filter(t=>t.type===filter),[monthTx,filter]);
+
+  // Nav
+  const prevMonth = ()=>{ if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); };
+  const nextMonth = ()=>{ if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
+
+  const saveTx = (tx) => { setTxs(p=>[tx,...p]); showToast('Movimiento guardado',tx.type==='income'?'#34d399':'#f87171'); };
+  const delTx  = (id) => { setTxs(p=>p.filter(t=>t.id!==id)); showToast('Eliminado','#f87171'); };
+
+  const doExport = ()=>{ exportCSV(txs,month,year); showToast(`CSV exportado: ${MONTHS[month]} ${year}`); };
+  const doImport = (e)=>{
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      const parsed=parseCSV(ev.target.result);
+      if(!parsed.length){showToast('CSV vacío o inválido','#f87171');return;}
+      setTxs(prev=>{ const ids=new Set(prev.map(t=>t.id)); return [...prev,...parsed.filter(t=>!ids.has(t.id))]; });
+      showToast(`${parsed.length} movimientos importados`);
+    };
+    r.readAsText(f); e.target.value='';
+  };
+
+  const segBtn = (label,val)=>(
+    <button onClick={()=>setFilter(val)} className={`seg-btn ${filter===val?'active':''}`}>{label}</button>
+  );
+
+  return (
+    <div className="min-h-screen px-4 py-6 max-w-[1280px] mx-auto space-y-5">
+
+      {toast && <Toast msg={toast.msg} color={toast.color}/>}
+      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={doImport}/>
+
+      {/* ── HEADER ── */}
+      <header className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-1">
+          <img src="icon.png" alt="Logo" className="w-9 h-9 rounded-xl object-cover shadow-lg"
+               onError={e=>{ e.target.style.display='none'; }}/>
+          <div>
+            <h1 className="font-serif text-2xl italic leading-none tracking-tight">ZenGastos</h1>
+            <p className="text-[10px] text-dim font-mono mt-0.5">finanzas compartidas</p>
+          </div>
+        </div>
+
+        {/* Month picker */}
+        <div className="glass rounded-xl flex items-center gap-1 p-1">
+          <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+            <LI name="ChevronLeft" size={16}/>
+          </button>
+          <span className="px-3 font-semibold text-sm min-w-[140px] text-center">
+            {MONTHS[month]} <span className="font-mono text-dim">{year}</span>
+          </span>
+          <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+            <LI name="ChevronRight" size={16}/>
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={doExport}
+            className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl text-xs font-semibold text-dim hover:text-bright transition-all hover:bg-raised">
+            <LI name="Download" size={13}/> Exportar
+          </button>
+          <button onClick={()=>fileRef.current.click()}
+            className="flex items-center gap-1.5 px-3 py-2 glass rounded-xl text-xs font-semibold text-dim hover:text-bright transition-all hover:bg-raised">
+            <LI name="Upload" size={13}/> Importar
+          </button>
+        </div>
+      </header>
+
+      {/* ── SUMMARY CARDS ── */}
+      <div className="grid grid-cols-4 gap-3 summary-4">
+        <SummaryCard label="Gastos" value={fmtEur(totalSpend)} color="#f87171"
+          sub="este mes" icon={<LI name="TrendingDown" size={14}/>} delay="delay-1"/>
+        <SummaryCard label="Ingresos" value={fmtEur(totalIncome)} color="#34d399"
+          sub="este mes" icon={<LI name="TrendingUp" size={14}/>} delay="delay-2"/>
+        <SummaryCard label="Balance" value={fmtEur(balance)} color={balance>=0?'#34d399':'#f87171'}
+          sub={balance>=0?'positivo':'déficit'} icon={<LI name="Wallet" size={14}/>} delay="delay-3"/>
+        <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)+'%'} color="#818cf8"
+          sub={totalIncome>0?`${fmtEur(totalSpend)} de ${fmtEur(totalIncome)}`:'sin ingresos'}
+          icon={<LI name="BarChart2" size={14}/>} delay="delay-4"/>
+      </div>
+
+      {/* ── TIPO BREAKDOWN ── */}
+      <div className="grid grid-cols-4 gap-3 cat-4">
+        {tipoData.map(({tipo,sum,pct})=>(
+          <div key={tipo} className="glass rounded-2xl p-4 space-y-2.5 anim-fadeup">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+              <span className="font-mono text-[10px] text-dim">{pct.toFixed(1)}%</span>
             </div>
+            <div className="font-mono font-semibold text-base text-bright">{fmtEur(sum)}</div>
+            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
+          </div>
+        ))}
+      </div>
 
-            {/* ── Transactions ── */}
-            <div className="glass rounded-2xl p-5">
-              {/* Header row */}
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <h2 className="text-xs font-display tracking-widest uppercase text-muted">Movimientos</h2>
-                <div className="flex gap-1.5">
-                  {filterBtn('Todo', 'all')}
-                  {filterBtn('Gastos', 'expense')}
-                  {filterBtn('Ingresos', 'income')}
-                </div>
-              </div>
+      {/* ── MAIN 2-COLUMN GRID ── */}
+      <div className="grid gap-5 two-col" style={{gridTemplateColumns:'1fr 360px'}}>
 
-              {/* Add buttons */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <button onClick={() => setModal('expense')}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold font-display transition-all hover:opacity-90 active:scale-95"
-                  style={{ background: '#dc262622', border: '1px solid #dc262644', color: '#ef4444' }}>
-                  <PlusIcon size={16} /> Gasto
-                </button>
-                <button onClick={() => setModal('income')}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold font-display transition-all hover:opacity-90 active:scale-95"
-                  style={{ background: '#16a34a22', border: '1px solid #16a34a44', color: '#22c55e' }}>
-                  <PlusIcon size={16} /> Ingreso
-                </button>
-              </div>
-
-              {/* List */}
-              {displayedTx.length === 0 ? (
-                <div className="text-center py-10 text-muted">
-                  <div className="text-3xl mb-2 opacity-30">◎</div>
-                  <p className="text-sm">Sin movimientos este mes</p>
-                </div>
-              ) : (
-                <div className="space-y-0.5">
-                  {displayedTx.map(tx => (
-                    <TxRow key={tx.id} tx={tx} onDelete={deleteTx} />
-                  ))}
-                </div>
-              )}
+        {/* LEFT: Transactions */}
+        <div className="glass rounded-2xl p-5 space-y-4">
+          {/* Controls */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="seg-wrap flex-1">
+              {segBtn('Todo','all')}
+              {segBtn('Gastos','expense')}
+              {segBtn('Ingresos','income')}
             </div>
-
-            <p className="text-center text-xs text-muted py-2 font-mono">
-              {transactions.length} movimientos en total · ZenGastos v2
-            </p>
+            <span className="font-mono text-[11px] text-dim">{displayTx.length} movimientos</span>
           </div>
 
-          {/* Modals */}
-          {modal && (
-            <AddModal
-              type={modal}
-              onSave={addTx}
-              onClose={() => setModal(null)}
-              currentMonth={month}
-              currentYear={year}
-            />
-          )}
+          {/* Add buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={()=>setAdd('expense')} className="btn-spend flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold">
+              <LI name="Plus" size={15}/> Gasto
+            </button>
+            <button onClick={()=>setAdd('income')} className="btn-income flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold">
+              <LI name="Plus" size={15}/> Ingreso
+            </button>
+          </div>
+
+          {/* List */}
+          <div className="space-y-0.5 max-h-[520px] overflow-y-auto pr-1">
+            {displayTx.length===0
+              ? <div className="text-center py-14 space-y-2">
+                  <div className="text-4xl opacity-20 font-serif italic">∅</div>
+                  <p className="text-sm text-dim">Sin movimientos en este mes</p>
+                </div>
+              : displayTx.map(tx=><TxRow key={tx.id} tx={tx} onDelete={delTx}/>)
+            }
+          </div>
         </div>
-      );
-    };
 
-    // ─── Mount ────────────────────────────────────────────────────
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        {/* RIGHT: Widgets */}
+        <div className="space-y-4">
+          <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
+          <CategoryWidget monthTx={monthTx}/>
+          <GoalsWidget/>
+        </div>
+      </div>
 
-    // ─── Service Worker Registration ──────────────────────────────
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(r => console.log('SW registrado:', r.scope))
-          .catch(e => console.warn('SW error:', e));
-      });
-    }
-  </script>
+      <p className="text-center text-[11px] text-dim font-mono pb-2">
+        {txs.length} movimientos totales · ZenGastos v2 · almacenamiento local
+      </p>
+
+      {/* Add TX Modal */}
+      {addModal && <AddTxModal type={addModal} onSave={saveTx} onClose={()=>setAdd(null)} month={month} year={year}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .then(r=>console.log('[ZenGastos] SW registrado'))
+      .catch(e=>console.warn('[ZenGastos] SW error',e));
+  });
+}
+</script>
 </body>
 </html>
