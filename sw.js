@@ -1,5 +1,5 @@
 // ─── ZenGastos Service Worker v2 ─────────────────────────────
-const CACHE_NAME = 'zengastos-v2';
+const CACHE_NAME = 'zengastos-v3';
 
 const PRECACHE = [
   './',
