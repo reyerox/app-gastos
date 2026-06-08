@@ -168,10 +168,10 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 //  CONSTANTS
 // ══════════════════════════════════════════════
 const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const TIPOS     = ['Obligatorios','Opcionales','Ocio','Otros'];
-const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Otros:'#94a3b8' };
-const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Otros:'#94a3b815' };
-const USERS     = ['Dani','Nati'];
+const TIPOS     = ['Obligatorios','Opcionales','Ocio','Inversiones','Otros'];
+const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Inversiones:'#a855f7', Otros:'#94a3b8' };
+const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Inversiones:'#a855f715', Otros:'#94a3b815' };
+const USERS     = ['Tú','Tu pareja'];
 
 const KEYS = {
   TX:      'zg_transactions',
@@ -188,14 +188,15 @@ const clamp   = (n,lo,hi) => Math.max(lo, Math.min(hi, n));
 // ══════════════════════════════════════════════
 //  CSV
 // ══════════════════════════════════════════════
-const CSV_HDR = ['id','date','type','concept','amount','tipo','paidBy','scope'];
+// Añadido customTipo al final para no romper CSVs antiguos
+const CSV_HDR = ['id','date','type','concept','amount','tipo','paidBy','scope','customTipo'];
 
 function exportCSV(txs, month, year) {
   const rows = txs
     .filter(t => { const d=new Date(t.date); return d.getMonth()===month && d.getFullYear()===year; })
     .sort((a,b) => new Date(a.date)-new Date(b.date));
   const lines = [CSV_HDR.join(','), ...rows.map(t =>
-    [t.id, t.date, t.type, `"${(t.concept||'').replace(/"/g,'""')}"`, t.amount, t.tipo, t.paidBy, t.scope||'Común'].join(',')
+    [t.id, t.date, t.type, `"${(t.concept||'').replace(/"/g,'""')}"`, t.amount, t.tipo, t.paidBy, t.scope||'Común', `"${(t.customTipo||'').replace(/"/g,'""')}"`].join(',')
   )];
   const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
   const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`ZenGastos_${MONTHS[month]}_${year}.csv` });
@@ -216,14 +217,15 @@ function parseCSV(text) {
       else cur+=ch;
     }
     const t = {
-      id:      cols[idx('id')]     || genId(),
-      date:    cols[idx('date')]   || new Date().toISOString().slice(0,10),
-      type:    cols[idx('type')]   || 'expense',
-      concept: cols[idx('concept')]|| '',
-      amount:  parseFloat(cols[idx('amount')]) || 0,
-      tipo:    cols[idx('tipo')]   || 'Otros',
-      paidBy:  cols[idx('paidBy')] || USERS[0],
-      scope:   cols[idx('scope')]  || 'Común',
+      id:         cols[idx('id')]        || genId(),
+      date:       cols[idx('date')]      || new Date().toISOString().slice(0,10),
+      type:       cols[idx('type')]      || 'expense',
+      concept:    cols[idx('concept')]   || '',
+      amount:     parseFloat(cols[idx('amount')]) || 0,
+      tipo:       cols[idx('tipo')]      || 'Otros',
+      paidBy:     cols[idx('paidBy')]    || USERS[0],
+      scope:      cols[idx('scope')]     || 'Común',
+      customTipo: cols[idx('customTipo')]|| '',
     };
     return t.amount > 0 ? t : null;
   }).filter(Boolean);
@@ -297,11 +299,9 @@ function SummaryCard({ label, value, color, sub, icon, delay='' }) {
 //  WIDGET: SETTLEMENT (CUENTAS CLARAS)
 // ══════════════════════════════════════════════
 function SettlementWidget({ monthTx }) {
-  // Solo tenemos en cuenta los gastos (no ingresos) que sean "Comunes"
   const sharedExp = monthTx.filter(t => t.type === 'expense' && t.scope === 'Común');
-
-  const user1 = USERS[0]; // Dani
-  const user2 = USERS[1]; // Nati
+  const user1 = USERS[0];
+  const user2 = USERS[1];
 
   const paidUser1 = sharedExp.filter(t => t.paidBy === user1).reduce((s,t) => s + t.amount, 0);
   const paidUser2 = sharedExp.filter(t => t.paidBy === user2).reduce((s,t) => s + t.amount, 0);
@@ -309,24 +309,23 @@ function SettlementWidget({ monthTx }) {
   const totalShared = paidUser1 + paidUser2;
   const half = totalShared / 2;
 
-  // Si diff > 0, significa que esa persona ha pagado más de la mitad y se le debe dinero
   const diff1 = paidUser1 - half;
   const diff2 = paidUser2 - half;
 
   let statusMsg = "Estáis en paz";
-  let statusColor = "#73738c"; // dim
+  let statusColor = "#73738c"; 
   let subMsg = "Ambos habéis aportado lo mismo.";
   let glowColor = "rgba(115, 115, 140, 0.2)";
 
   if (diff1 > 0) {
     statusMsg = `${user2} te debe`;
     subMsg = fmtEur(diff1);
-    statusColor = "#34d399"; // Verde (te llega dinero)
+    statusColor = "#34d399";
     glowColor = "rgba(52, 211, 153, 0.2)";
   } else if (diff2 > 0) {
     statusMsg = `Debes a ${user2}`;
     subMsg = fmtEur(diff2);
-    statusColor = "#f87171"; // Rojo (tienes que pagar)
+    statusColor = "#f87171";
     glowColor = "rgba(248, 113, 113, 0.2)";
   } else if (totalShared > 0) {
     statusMsg = "Cuentas saldadas 🤝";
@@ -337,15 +336,12 @@ function SettlementWidget({ monthTx }) {
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5 relative overflow-hidden">
-      {/* Fondo luminoso dinámico */}
       <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-40 pointer-events-none rounded-full" style={{ background: glowColor, transform: 'translate(30%, -30%)' }}></div>
-
       <div className="border-b border-border/50 pb-3 relative z-10">
         <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
           <LI name="Scale" size={14}/> Cuentas Claras
         </span>
       </div>
-      
       <div className="flex justify-between items-center bg-[#1c1c25] p-4 rounded-xl border border-white/5 relative z-10">
         <div className="text-center w-1/2 border-r border-white/5">
           <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user1}</p>
@@ -356,7 +352,6 @@ function SettlementWidget({ monthTx }) {
           <p className="font-mono font-bold text-[#fbbf24]">{fmtEur(paidUser2)}</p>
         </div>
       </div>
-
       <div className="text-center pt-2 relative z-10">
         <p className="text-[11px] font-bold text-dim uppercase tracking-widest mb-1.5">{statusMsg}</p>
         <p className="font-mono text-[26px] font-bold tracking-tight" style={{color: statusColor, textShadow: `0 2px 16px ${glowColor}`}}>
@@ -382,9 +377,7 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
           <LI name="BarChart2" size={14}/> Balance Gráfico
         </span>
       </div>
-      
       <div className="flex items-end justify-around h-[140px] pt-4 pb-2">
-        {/* Barra de Ingresos */}
         <div className="flex flex-col items-center gap-3 w-1/3">
           <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
             <div className="w-full rounded-t-xl transition-all duration-1000 ease-out" 
@@ -393,8 +386,6 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
           </div>
           <span className="text-xs font-semibold text-dim uppercase tracking-widest">Ingresos</span>
         </div>
-
-        {/* Barra de Gastos */}
         <div className="flex flex-col items-center gap-3 w-1/3">
           <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
             <div className="w-full rounded-t-xl transition-all duration-1000 ease-out delay-100" 
@@ -409,25 +400,40 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
 }
 
 // ══════════════════════════════════════════════
-//  ADD TRANSACTION MODAL
+//  ADD / EDIT TRANSACTION MODAL
 // ══════════════════════════════════════════════
-function AddTxModal({ type, onSave, onClose, month, year }) {
+function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
   const today = new Date();
   const defDate = new Date(year, month, year===today.getFullYear()&&month===today.getMonth() ? today.getDate() : 1)
     .toISOString().slice(0,10);
-  const [f, setF] = useState({ concept:'', amount:'', tipo:TIPOS[0], paidBy:USERS[0], date:defDate, scope:'Común' });
+  
+  // Initialize with initialData if editing, else defaults
+  const [f, setF] = useState(initialData || { 
+    concept:'', amount:'', tipo:TIPOS[0], customTipo:'', paidBy:USERS[0], date:defDate, scope:'Común' 
+  });
+  
   const set = (k,v) => setF(p=>({...p,[k]:v}));
   const isIncome = type === 'income';
+  const isEdit = !!initialData;
 
   const save = () => {
     if (!f.concept.trim() || parseFloat(f.amount)<=0) return;
-    onSave({ id:genId(), date:f.date, type, concept:f.concept.trim(),
-              amount:parseFloat(parseFloat(f.amount).toFixed(2)), tipo:f.tipo, paidBy:f.paidBy, scope:f.scope });
+    onSave({ 
+      id: isEdit ? initialData.id : genId(), 
+      date: f.date, 
+      type, 
+      concept: f.concept.trim(),
+      amount: parseFloat(parseFloat(f.amount).toFixed(2)), 
+      tipo: f.tipo, 
+      customTipo: f.tipo === 'Otros' ? (f.customTipo || '').trim() : '',
+      paidBy: f.paidBy, 
+      scope: f.scope 
+    }, isEdit);
     onClose();
   };
 
   return (
-    <Modal title={isIncome ? 'Nuevo ingreso' : 'Nuevo gasto'} onClose={onClose}>
+    <Modal title={isEdit ? 'Editar registro' : (isIncome ? 'Nuevo ingreso' : 'Nuevo gasto')} onClose={onClose}>
       <div className="space-y-5">
         <div>
           <label className="f-label">Fecha</label>
@@ -435,8 +441,9 @@ function AddTxModal({ type, onSave, onClose, month, year }) {
         </div>
         <div>
           <label className="f-label">Concepto</label>
-          <input type="text" className="f-input" placeholder="Supermercado, Anillo..." value={f.concept} onChange={e=>set('concept',e.target.value)}/>
+          <input type="text" className="f-input" placeholder="Supermercado, Nómina..." value={f.concept} onChange={e=>set('concept',e.target.value)}/>
         </div>
+        
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="f-label">Cantidad (€)</label>
@@ -449,6 +456,14 @@ function AddTxModal({ type, onSave, onClose, month, year }) {
             </select>
           </div>
         </div>
+
+        {/* Input Dinámico para Etiqueta Custom si elige "Otros" */}
+        {f.tipo === 'Otros' && (
+          <div className="anim-fadeup">
+            <label className="f-label">Etiqueta Personalizada</label>
+            <input type="text" className="f-input" placeholder="Ej: Mascotas, Regalos..." value={f.customTipo} onChange={e=>set('customTipo',e.target.value)}/>
+          </div>
+        )}
         
         <div>
           <label className="f-label">¿Para quién es?</label>
@@ -471,9 +486,9 @@ function AddTxModal({ type, onSave, onClose, month, year }) {
           </div>
         </div>
         <button onClick={save}
-          className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all mt-2"
-          style={{ background: isIncome?'#065f4640':'#7f1d1d40', border:`1px solid ${isIncome?'#34d39960':'#f8717160'}`, color: isIncome?'#34d399':'#f87171' }}>
-          Guardar {isIncome?'ingreso':'gasto'}
+          className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all mt-2 shadow-lg"
+          style={{ background: isEdit?'#3b82f640':(isIncome?'#065f4640':'#7f1d1d40'), border:`1px solid ${isEdit?'#3b82f660':(isIncome?'#34d39960':'#f8717160')}`, color: isEdit?'#60a5fa':(isIncome?'#34d399':'#f87171') }}>
+          {isEdit ? 'Actualizar registro' : `Guardar ${isIncome?'ingreso':'gasto'}`}
         </button>
       </div>
     </Modal>
@@ -483,13 +498,18 @@ function AddTxModal({ type, onSave, onClose, month, year }) {
 // ══════════════════════════════════════════════
 //  TRANSACTION ROW
 // ══════════════════════════════════════════════
-function TxRow({ tx, onDelete }) {
+function TxRow({ tx, onEdit, onDelete }) {
   const isIn = tx.type==='income';
   const clr  = isIn ? '#34d399' : '#f87171';
   const bg   = isIn ? '#34d39915' : '#f8717115';
   const isPersonal = tx.scope === 'Personal';
   const dateStr = new Date(tx.date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
   
+  // Si es tipo "Otros" y ha escrito algo, mostramos su texto. Si no, mostramos "Otros".
+  const displayTag = (tx.tipo === 'Otros' && tx.customTipo) ? tx.customTipo : tx.tipo;
+  const tagColor = TIPO_CLR[tx.tipo] || '#888';
+  const tagBg = TIPO_BG[tx.tipo] || '#26262f';
+
   return (
     <div className="tx-row flex items-center gap-3.5 px-3.5 py-3 anim-slidein">
       <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border border-white/5" style={{background:bg}}>
@@ -498,8 +518,8 @@ function TxRow({ tx, onDelete }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <span className="text-[14.5px] font-semibold text-bright truncate tracking-tight">{tx.concept}</span>
-          <span className="chip border border-white/5" style={{background:TIPO_BG[tx.tipo]||'#26262f', color:TIPO_CLR[tx.tipo]||'#888'}}>
-            {tx.tipo}
+          <span className="chip border border-white/5" style={{background:tagBg, color:tagColor}}>
+            {displayTag}
           </span>
           {isPersonal && (
             <span className="chip border border-white/5" style={{background:'#818cf820', color:'#818cf8'}}>
@@ -513,11 +533,16 @@ function TxRow({ tx, onDelete }) {
           <span className="text-[11.5px] font-medium" style={{color:'#818cf8'}}>{tx.paidBy}</span>
         </div>
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <span className="font-mono text-[15px] font-bold" style={{color:clr}}>
+      
+      {/* Botones de Acción (Editar y Borrar) */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <span className="font-mono text-[15px] font-bold mr-2" style={{color:clr}}>
           {isIn?'+':'-'}{fmtEur(tx.amount)}
         </span>
-        <button className="del-btn text-dim hover:text-spend p-1.5 rounded-xl hover:bg-spend/10 transition-colors" onClick={()=>onDelete(tx.id)}>
+        <button className="del-btn text-dim hover:text-blue-400 p-1.5 rounded-xl hover:bg-blue-400/10 transition-colors" onClick={()=>onEdit(tx)} title="Editar">
+          <LI name="Pencil" size={15}/>
+        </button>
+        <button className="del-btn text-dim hover:text-spend p-1.5 rounded-xl hover:bg-spend/10 transition-colors" onClick={()=>onDelete(tx.id)} title="Borrar">
           <LI name="Trash2" size={15}/>
         </button>
       </div>
@@ -601,11 +626,13 @@ function BudgetWidget({ monthKey, totalSpent }) {
 // ══════════════════════════════════════════════
 function CategoryWidget({ monthTx }) {
   const expenses = monthTx.filter(t=>t.type==='expense');
-  const total    = expenses.reduce((s,t)=>s+t.amount,0)||1;
-  const data     = TIPOS.map(tipo=>{
+  const total    = expenses.reduce((s,t)=>s+t.amount,0) || 1; // Para evitar división por 0
+  
+  // Quitamos el ".filter(d=>d.sum>0)" para que siempre salgan todas las categorías, incluso las de 0%
+  const data = TIPOS.map(tipo => {
     const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
     return { tipo, sum, pct:(sum/total)*100 };
-  }).filter(d=>d.sum>0).sort((a,b)=>b.sum-a.sum);
+  }).sort((a,b)=>b.sum-a.sum); 
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5">
@@ -615,26 +642,20 @@ function CategoryWidget({ monthTx }) {
         </span>
       </div>
       
-      {data.length===0
-        ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
-            <LI name="BarChart" size={24} className="text-dim"/>
-            <p className="text-sm text-dim text-center">Sin datos todavía.</p>
-          </div>
-        : <div className="space-y-4 pt-1">
-            {data.map(({ tipo, sum, pct })=>(
-              <div key={tipo}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
-                  <div className="flex gap-2.5 items-center">
-                    <span className="font-mono text-xs text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
-                    <span className="font-mono text-[13px] font-bold text-bright">{fmtEur(sum)}</span>
-                  </div>
-                </div>
-                <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
+      <div className="space-y-4 pt-1">
+        {data.map(({ tipo, sum, pct })=>(
+          <div key={tipo} className={sum === 0 ? "opacity-40" : ""}>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+              <div className="flex gap-2.5 items-center">
+                <span className="font-mono text-xs text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
+                <span className="font-mono text-[13px] font-bold text-bright">{fmtEur(sum)}</span>
               </div>
-            ))}
+            </div>
+            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
           </div>
-      }
+        ))}
+      </div>
     </div>
   );
 }
@@ -760,7 +781,10 @@ function App() {
   const [month, setMonth]   = useState(now.getMonth());
   const [year, setYear]     = useState(now.getFullYear());
   const [filter, setFilter] = useState('all');
-  const [addModal, setAdd]  = useState(null); 
+  
+  // El modal ahora recibe un objeto { open: true/false, type: 'income'/'expense', tx: null (nuevo) o tx_object (editar) }
+  const [modalConfig, setModalConfig] = useState({ open: false, type: 'expense', tx: null }); 
+  
   const [toast, setToast]   = useState(null);
   const fileRef             = useRef();
 
@@ -793,7 +817,16 @@ function App() {
   const prevMonth = ()=>{ if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); };
   const nextMonth = ()=>{ if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
 
-  const saveTx = (tx) => { setTxs(p=>[tx,...p]); showToast('Movimiento registrado',tx.type==='income'?'#34d399':'#f87171'); };
+  const saveTx = (tx, isEdit) => { 
+    if (isEdit) {
+      setTxs(p => p.map(t => t.id === tx.id ? tx : t));
+      showToast('Registro actualizado', '#60a5fa');
+    } else {
+      setTxs(p => [tx, ...p]); 
+      showToast('Movimiento registrado', tx.type==='income'?'#34d399':'#f87171'); 
+    }
+  };
+  
   const delTx  = (id) => { setTxs(p=>p.filter(t=>t.id!==id)); showToast('Eliminado','#f87171'); };
 
   const doExport = ()=>{ exportCSV(txs,month,year); showToast(`Exportado: ${MONTHS[month]} ${year}`); };
@@ -895,10 +928,10 @@ function App() {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={()=>setAdd('expense')} className="btn-spend flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+            <button onClick={()=>setModalConfig({ open: true, type: 'expense', tx: null })} className="btn-spend flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
               <LI name="MinusCircle" size={18}/> Añadir Gasto
             </button>
-            <button onClick={()=>setAdd('income')} className="btn-income flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+            <button onClick={()=>setModalConfig({ open: true, type: 'income', tx: null })} className="btn-income flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
               <LI name="PlusCircle" size={18}/> Añadir Ingreso
             </button>
           </div>
@@ -909,7 +942,7 @@ function App() {
                   <LI name="Receipt" size={48} className="text-dim"/>
                   <p className="text-[15px] font-medium text-dim">Sin movimientos en este mes</p>
                 </div>
-              : displayTx.map(tx=><TxRow key={tx.id} tx={tx} onDelete={delTx}/>)
+              : displayTx.map(tx=><TxRow key={tx.id} tx={tx} onEdit={(tx)=>setModalConfig({ open: true, type: tx.type, tx })} onDelete={delTx}/>)
             }
           </div>
         </div>
@@ -928,8 +961,17 @@ function App() {
         ZenGastos Pro · {txs.length} Registros Locales
       </p>
 
-      {/* Add TX Modal */}
-      {addModal && <AddTxModal type={addModal} onSave={saveTx} onClose={()=>setAdd(null)} month={month} year={year}/>}
+      {/* Add / Edit TX Modal */}
+      {modalConfig.open && (
+        <AddTxModal 
+          type={modalConfig.type} 
+          initialData={modalConfig.tx} 
+          onSave={saveTx} 
+          onClose={()=>setModalConfig({ open: false, type: 'expense', tx: null })} 
+          month={month} 
+          year={year}
+        />
+      )}
     </div>
   );
 }
