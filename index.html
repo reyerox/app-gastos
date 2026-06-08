@@ -171,7 +171,7 @@ const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ago
 const TIPOS     = ['Obligatorios','Opcionales','Ocio','Otros'];
 const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Otros:'#94a3b8' };
 const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Otros:'#94a3b815' };
-const USERS     = ['Tú','Tu pareja'];
+const USERS     = ['Dani','Nati'];
 
 const KEYS = {
   TX:      'zg_transactions',
@@ -300,8 +300,8 @@ function SettlementWidget({ monthTx }) {
   // Solo tenemos en cuenta los gastos (no ingresos) que sean "Comunes"
   const sharedExp = monthTx.filter(t => t.type === 'expense' && t.scope === 'Común');
 
-  const user1 = USERS[0]; // Tú
-  const user2 = USERS[1]; // Tu pareja
+  const user1 = USERS[0]; // Dani
+  const user2 = USERS[1]; // Nati
 
   const paidUser1 = sharedExp.filter(t => t.paidBy === user1).reduce((s,t) => s + t.amount, 0);
   const paidUser2 = sharedExp.filter(t => t.paidBy === user2).reduce((s,t) => s + t.amount, 0);
