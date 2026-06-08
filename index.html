@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZenGastos</title>
+  <meta name="description" content="Registro de gastos compartido para parejas" />
+  <meta name="theme-color" content="#09090d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+
+  <!-- Google Fonts: Inter + Space Grotesk + Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif:   ['Playfair Display', 'serif'],
+            mono:    ['Space Grotesk', 'monospace'],
+            sans:    ['Inter', 'sans-serif'],
+          },
+          colors: {
+            base:    '#09090d',
+            surface: '#111116',
+            card:    '#16161d',
+            raised:  '#1c1c25',
+            border:  '#26262f',
+            subtle:  '#32323e',
+            dim:     '#73738c',
+            muted:   '#8888a0',
+            soft:    '#b8b8cc',
+            bright:  '#f4f4f5',
+            income: { DEFAULT: '#34d399', dim: '#065f46', glow: '#34d39920' },
+            spend:  { DEFAULT: '#f87171', dim: '#7f1d1d', glow: '#f8717120' },
+            accent: { DEFAULT: '#818cf8', dim: '#312e81', glow: '#818cf820' },
+            gold:   { DEFAULT: '#fbbf24', glow: '#fbbf2420' },
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #09090d;
+      color: #f4f4f5;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #32323e; border-radius: 99px; }
+
+    /* Glass card - Refinada */
+    .glass {
+      background: rgba(22, 22, 29, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Progress bar */
+    .prog-track { height: 6px; background: #1c1c25; border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+    .prog-fill   { height: 100%; border-radius: 99px; transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
+
+    /* Big progress */
+    .prog-big    { height: 10px; background: #1c1c25; border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+    .prog-big .prog-fill { height: 100%; }
+
+    /* Animations */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideIn  { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes popIn    { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
+
+    .anim-fadeup  { animation: fadeUp  0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .anim-slidein { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .anim-popin   { animation: popIn   0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+    /* Stagger delays */
+    .delay-1 { animation-delay:0.05s; }
+    .delay-2 { animation-delay:0.10s; }
+    .delay-3 { animation-delay:0.15s; }
+    .delay-4 { animation-delay:0.20s; }
+
+    /* Transaction row hover */
+    .tx-row { transition: all 0.2s ease; border-radius: 12px; border: 1px solid transparent; }
+    .tx-row:hover { background: rgba(38, 38, 47, 0.4); border: 1px solid rgba(255, 255, 255, 0.03); }
+    .tx-row:hover .del-btn { opacity: 1; }
+    .del-btn { opacity: 0; transition: opacity 0.2s ease; }
+
+    /* Glow button */
+    .btn-income { background: rgba(6, 95, 70, 0.3); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; transition: all 0.2s; }
+    .btn-income:hover { background: rgba(6, 95, 70, 0.5); box-shadow: 0 4px 20px rgba(52, 211, 153, 0.15); transform: translateY(-1px); border-color: rgba(52, 211, 153, 0.5); }
+    .btn-spend  { background: rgba(127, 29, 29, 0.3); border: 1px solid rgba(248, 113, 113, 0.3); color: #f87171; transition: all 0.2s; }
+    .btn-spend:hover  { background: rgba(127, 29, 29, 0.5); box-shadow: 0 4px 20px rgba(248, 113, 113, 0.15); transform: translateY(-1px); border-color: rgba(248, 113, 113, 0.5); }
+
+    /* Tag chip */
+    .chip { display:inline-flex; align-items:center; padding: 2px 10px; border-radius: 99px; font-family:'Space Grotesk',monospace; font-size:10.5px; font-weight:600; letter-spacing:0.02em; }
+
+    /* Modal overlay */
+    .modal-bg { animation: popIn 0.25s ease; background: rgba(0,0,0,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .modal-panel { background: #111116; border: 1px solid #26262f; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+
+    /* Form input */
+    .f-input {
+      width:100%; background:#1c1c25; border:1px solid #26262f; border-radius:12px;
+      padding:12px 16px; font-size:14px; font-family:inherit; color:#f4f4f5;
+      outline:none; transition:all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .f-input:focus { border-color: #818cf8; box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.1), inset 0 2px 4px rgba(0,0,0,0.2); }
+    .f-label { font-size:11px; color:#8888a0; text-transform:uppercase; letter-spacing:0.06em; font-weight:600; margin-bottom:8px; display:block; }
+
+    /* Segment control */
+    .seg-wrap { display:flex; background:#1c1c25; border:1px solid #26262f; border-radius:12px; padding:4px; gap:2px; }
+    .seg-btn { flex:1; padding:8px; border-radius:8px; font-size:12.5px; font-weight:600; text-align:center; cursor:pointer; transition:all 0.2s; color:#73738c; }
+    .seg-btn.active { background:#26262f; color:#f4f4f5; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+    /* Toast */
+    .toast { animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    /* Noise texture overlay */
+    body::before {
+      content:'';
+      position:fixed; inset:0; pointer-events:none; z-index:0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.5;
+    }
+
+    #root { position: relative; z-index: 1; }
+
+    @media (max-width: 1023px) {
+      .two-col { grid-template-columns: 1fr !important; }
+    }
+    @media (max-width: 640px) {
+      .summary-4 { grid-template-columns: repeat(2, 1fr) !important; }
+      .cat-4     { grid-template-columns: repeat(2, 1fr) !important; }
+      .del-btn   { opacity: 1; }
+    }
+  </style>
+
+  <!-- React + ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+// ══════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════
+const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const TIPOS     = ['Obligatorios','Opcionales','Ocio','Otros'];
+const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Otros:'#94a3b8' };
+const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Otros:'#94a3b815' };
+const USERS     = ['Tú','Tu pareja'];
+
+const KEYS = {
+  TX:      'zg_transactions',
+  BUDGET:  'zg_budgets',
+  GOALS:   'zg_goals',
+};
+
+const genId   = () => `${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+const ls      = (k, fb=[]) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fb; } catch { return fb; } };
+const lsSet   = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+const fmtEur  = (n) => n.toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+const clamp   = (n,lo,hi) => Math.max(lo, Math.min(hi, n));
+
+// ══════════════════════════════════════════════
+//  CSV
+// ══════════════════════════════════════════════
+const CSV_HDR = ['id','date','type','concept','amount','tipo','paidBy','scope'];
+
+function exportCSV(txs, month, year) {
+  const rows = txs
+    .filter(t => { const d=new Date(t.date); return d.getMonth()===month && d.getFullYear()===year; })
+    .sort((a,b) => new Date(a.date)-new Date(b.date));
+  const lines = [CSV_HDR.join(','), ...rows.map(t =>
+    [t.id, t.date, t.type, `"${(t.concept||'').replace(/"/g,'""')}"`, t.amount, t.tipo, t.paidBy, t.scope||'Común'].join(',')
+  )];
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`ZenGastos_${MONTHS[month]}_${year}.csv` });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const hdrs = lines[0].split(',').map(s=>s.trim());
+  const idx  = k => hdrs.indexOf(k);
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur='', inQ=false;
+    for (const ch of line+',') {
+      if (ch==='"') inQ=!inQ;
+      else if (ch===',' && !inQ) { cols.push(cur.trim()); cur=''; }
+      else cur+=ch;
+    }
+    const t = {
+      id:      cols[idx('id')]     || genId(),
+      date:    cols[idx('date')]   || new Date().toISOString().slice(0,10),
+      type:    cols[idx('type')]   || 'expense',
+      concept: cols[idx('concept')]|| '',
+      amount:  parseFloat(cols[idx('amount')]) || 0,
+      tipo:    cols[idx('tipo')]   || 'Otros',
+      paidBy:  cols[idx('paidBy')] || USERS[0],
+      scope:   cols[idx('scope')]  || 'Común',
+    };
+    return t.amount > 0 ? t : null;
+  }).filter(Boolean);
+}
+
+// ══════════════════════════════════════════════
+//  SMALL COMPONENTS
+// ══════════════════════════════════════════════
+function LI({ name, size=16, className='' }) {
+  const ref = useRef();
+  useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const svg = lucide.createElement(lucide[name.replace(/-./g, x=>x[1].toUpperCase())]);
+      if (svg) { svg.setAttribute('width',size); svg.setAttribute('height',size); ref.current.appendChild(svg); }
+    }
+  }, [name, size]);
+  return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} />;
+}
+
+function Toast({ msg, color }) {
+  return (
+    <div className="toast fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-surface border border-border shadow-2xl text-sm font-semibold"
+         style={{ borderLeft:`4px solid ${color}`, color: '#f4f4f5' }}>
+      <div className="w-2 h-2 rounded-full" style={{backgroundColor: color}}></div>
+      {msg}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children, wide=false }) {
+  return ReactDOM.createPortal(
+    <div className="modal-bg fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className={`modal-panel rounded-2xl w-full ${wide?'max-w-lg':'max-w-md'} max-h-[92vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between px-7 py-5 border-b border-border bg-[#16161d]">
+          <h2 className="font-serif text-xl italic">{title}</h2>
+          <button onClick={onClose} className="text-dim hover:text-bright transition-colors p-2 rounded-xl hover:bg-raised">
+            <LI name="X" size={18}/>
+          </button>
+        </div>
+        <div className="p-7">{children}</div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function ProgBar({ pct, color, big=false }) {
+  const cl = big ? 'prog-big' : 'prog-track';
+  return (
+    <div className={cl}>
+      <div className="prog-fill" style={{ width:`${clamp(pct,0,100)}%`, background:color, boxShadow: `0 0 10px ${color}40` }}/>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, color, sub, icon, delay='' }) {
+  return (
+    <div className={`glass rounded-2xl p-5 flex flex-col gap-2 anim-fadeup ${delay}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim">{label}</span>
+        {icon && <span className="text-dim opacity-70">{icon}</span>}
+      </div>
+      <span className="font-mono text-[22px] font-bold" style={{color, textShadow: `0 2px 10px ${color}20`}}>{value}</span>
+      {sub && <span className="text-xs text-dim font-medium">{sub}</span>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: SETTLEMENT (CUENTAS CLARAS)
+// ══════════════════════════════════════════════
+function SettlementWidget({ monthTx }) {
+  // Solo tenemos en cuenta los gastos (no ingresos) que sean "Comunes"
+  const sharedExp = monthTx.filter(t => t.type === 'expense' && t.scope === 'Común');
+
+  const user1 = USERS[0]; // Tú
+  const user2 = USERS[1]; // Tu pareja
+
+  const paidUser1 = sharedExp.filter(t => t.paidBy === user1).reduce((s,t) => s + t.amount, 0);
+  const paidUser2 = sharedExp.filter(t => t.paidBy === user2).reduce((s,t) => s + t.amount, 0);
+
+  const totalShared = paidUser1 + paidUser2;
+  const half = totalShared / 2;
+
+  // Si diff > 0, significa que esa persona ha pagado más de la mitad y se le debe dinero
+  const diff1 = paidUser1 - half;
+  const diff2 = paidUser2 - half;
+
+  let statusMsg = "Estáis en paz";
+  let statusColor = "#73738c"; // dim
+  let subMsg = "Ambos habéis aportado lo mismo.";
+  let glowColor = "rgba(115, 115, 140, 0.2)";
+
+  if (diff1 > 0) {
+    statusMsg = `${user2} te debe`;
+    subMsg = fmtEur(diff1);
+    statusColor = "#34d399"; // Verde (te llega dinero)
+    glowColor = "rgba(52, 211, 153, 0.2)";
+  } else if (diff2 > 0) {
+    statusMsg = `Debes a ${user2}`;
+    subMsg = fmtEur(diff2);
+    statusColor = "#f87171"; // Rojo (tienes que pagar)
+    glowColor = "rgba(248, 113, 113, 0.2)";
+  } else if (totalShared > 0) {
+    statusMsg = "Cuentas saldadas 🤝";
+    subMsg = "0,00 € pendientes";
+    statusColor = "#818cf8";
+    glowColor = "rgba(129, 140, 248, 0.2)";
+  }
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5 relative overflow-hidden">
+      {/* Fondo luminoso dinámico */}
+      <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-40 pointer-events-none rounded-full" style={{ background: glowColor, transform: 'translate(30%, -30%)' }}></div>
+
+      <div className="border-b border-border/50 pb-3 relative z-10">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="Scale" size={14}/> Cuentas Claras
+        </span>
+      </div>
+      
+      <div className="flex justify-between items-center bg-[#1c1c25] p-4 rounded-xl border border-white/5 relative z-10">
+        <div className="text-center w-1/2 border-r border-white/5">
+          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user1}</p>
+          <p className="font-mono font-bold text-[#818cf8]">{fmtEur(paidUser1)}</p>
+        </div>
+        <div className="text-center w-1/2">
+          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user2}</p>
+          <p className="font-mono font-bold text-[#fbbf24]">{fmtEur(paidUser2)}</p>
+        </div>
+      </div>
+
+      <div className="text-center pt-2 relative z-10">
+        <p className="text-[11px] font-bold text-dim uppercase tracking-widest mb-1.5">{statusMsg}</p>
+        <p className="font-mono text-[26px] font-bold tracking-tight" style={{color: statusColor, textShadow: `0 2px 16px ${glowColor}`}}>
+          {totalShared === 0 ? 'Sin gastos comunes' : subMsg}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: CHART 
+// ══════════════════════════════════════════════
+function BalanceChartWidget({ totalIncome, totalSpend }) {
+  const maxVal = Math.max(totalIncome, totalSpend, 1);
+  const incPct = (totalIncome / maxVal) * 100;
+  const expPct = (totalSpend / maxVal) * 100;
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="border-b border-border/50 pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="BarChart2" size={14}/> Balance Gráfico
+        </span>
+      </div>
+      
+      <div className="flex items-end justify-around h-[140px] pt-4 pb-2">
+        {/* Barra de Ingresos */}
+        <div className="flex flex-col items-center gap-3 w-1/3">
+          <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
+            <div className="w-full rounded-t-xl transition-all duration-1000 ease-out" 
+                 style={{ height: `${incPct}%`, background: '#34d399', boxShadow: '0 -4px 16px rgba(52, 211, 153, 0.25)' }}>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-dim uppercase tracking-widest">Ingresos</span>
+        </div>
+
+        {/* Barra de Gastos */}
+        <div className="flex flex-col items-center gap-3 w-1/3">
+          <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
+            <div className="w-full rounded-t-xl transition-all duration-1000 ease-out delay-100" 
+                 style={{ height: `${expPct}%`, background: '#f87171', boxShadow: '0 -4px 16px rgba(248, 113, 113, 0.25)' }}>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-dim uppercase tracking-widest">Gastos</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  ADD TRANSACTION MODAL
+// ══════════════════════════════════════════════
+function AddTxModal({ type, onSave, onClose, month, year }) {
+  const today = new Date();
+  const defDate = new Date(year, month, year===today.getFullYear()&&month===today.getMonth() ? today.getDate() : 1)
+    .toISOString().slice(0,10);
+  const [f, setF] = useState({ concept:'', amount:'', tipo:TIPOS[0], paidBy:USERS[0], date:defDate, scope:'Común' });
+  const set = (k,v) => setF(p=>({...p,[k]:v}));
+  const isIncome = type === 'income';
+
+  const save = () => {
+    if (!f.concept.trim() || parseFloat(f.amount)<=0) return;
+    onSave({ id:genId(), date:f.date, type, concept:f.concept.trim(),
+              amount:parseFloat(parseFloat(f.amount).toFixed(2)), tipo:f.tipo, paidBy:f.paidBy, scope:f.scope });
+    onClose();
+  };
+
+  return (
+    <Modal title={isIncome ? 'Nuevo ingreso' : 'Nuevo gasto'} onClose={onClose}>
+      <div className="space-y-5">
+        <div>
+          <label className="f-label">Fecha</label>
+          <input type="date" className="f-input" value={f.date} onChange={e=>set('date',e.target.value)} style={{colorScheme:'dark'}}/>
+        </div>
+        <div>
+          <label className="f-label">Concepto</label>
+          <input type="text" className="f-input" placeholder="Supermercado, Anillo..." value={f.concept} onChange={e=>set('concept',e.target.value)}/>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="f-label">Cantidad (€)</label>
+            <input type="number" step="0.01" min="0.01" className="f-input" placeholder="0.00" value={f.amount} onChange={e=>set('amount',e.target.value)}/>
+          </div>
+          <div>
+            <label className="f-label">Tipo</label>
+            <select className="f-input" value={f.tipo} onChange={e=>set('tipo',e.target.value)} style={{colorScheme:'dark'}}>
+              {TIPOS.map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
+        
+        <div>
+          <label className="f-label">¿Para quién es?</label>
+          <div className="seg-wrap">
+            <button onClick={()=>set('scope','Común')} className={`seg-btn ${f.scope==='Común'?'active':''}`}>🏠 Común</button>
+            <button onClick={()=>set('scope','Personal')} className={`seg-btn ${f.scope==='Personal'?'active':''}`}>👤 Personal</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="f-label">¿Quién {isIncome ? 'lo ingresa' : 'paga'}?</label>
+          <div className="grid grid-cols-2 gap-3">
+            {USERS.map(u=>(
+              <button key={u} onClick={()=>set('paidBy',u)}
+                className="py-3 rounded-xl text-sm font-semibold transition-all shadow-sm"
+                style={{ background: f.paidBy===u?'#818cf820':'#1c1c25', border:`1px solid ${f.paidBy===u?'#818cf8':'#26262f'}`, color: f.paidBy===u?'#a5b4fc':'#8888a0' }}>
+                {u}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button onClick={save}
+          className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all mt-2"
+          style={{ background: isIncome?'#065f4640':'#7f1d1d40', border:`1px solid ${isIncome?'#34d39960':'#f8717160'}`, color: isIncome?'#34d399':'#f87171' }}>
+          Guardar {isIncome?'ingreso':'gasto'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  TRANSACTION ROW
+// ══════════════════════════════════════════════
+function TxRow({ tx, onDelete }) {
+  const isIn = tx.type==='income';
+  const clr  = isIn ? '#34d399' : '#f87171';
+  const bg   = isIn ? '#34d39915' : '#f8717115';
+  const isPersonal = tx.scope === 'Personal';
+  const dateStr = new Date(tx.date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+  
+  return (
+    <div className="tx-row flex items-center gap-3.5 px-3.5 py-3 anim-slidein">
+      <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border border-white/5" style={{background:bg}}>
+        <LI name={isIn?'ArrowUpRight':'ArrowDownRight'} size={18} style={{color:clr}} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className="text-[14.5px] font-semibold text-bright truncate tracking-tight">{tx.concept}</span>
+          <span className="chip border border-white/5" style={{background:TIPO_BG[tx.tipo]||'#26262f', color:TIPO_CLR[tx.tipo]||'#888'}}>
+            {tx.tipo}
+          </span>
+          {isPersonal && (
+            <span className="chip border border-white/5" style={{background:'#818cf820', color:'#818cf8'}}>
+              👤 Personal
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11.5px] text-dim font-medium">{dateStr}</span>
+          <span className="text-dim text-[10px]">·</span>
+          <span className="text-[11.5px] font-medium" style={{color:'#818cf8'}}>{tx.paidBy}</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="font-mono text-[15px] font-bold" style={{color:clr}}>
+          {isIn?'+':'-'}{fmtEur(tx.amount)}
+        </span>
+        <button className="del-btn text-dim hover:text-spend p-1.5 rounded-xl hover:bg-spend/10 transition-colors" onClick={()=>onDelete(tx.id)}>
+          <LI name="Trash2" size={15}/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: MONTHLY BUDGET
+// ══════════════════════════════════════════════
+function BudgetWidget({ monthKey, totalSpent }) {
+  const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState('');
+
+  const budget = budgets[monthKey] || 0;
+  const pct    = budget > 0 ? (totalSpent/budget)*100 : 0;
+  const over   = pct > 100;
+  const barClr = over ? '#f87171' : pct>80 ? '#fbbf24' : '#34d399';
+
+  const save = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v>0) {
+      const next = {...budgets,[monthKey]:v};
+      setBudgets(next); lsSet(KEYS.BUDGET,next);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b border-border/50 pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="Target" size={14}/> Presupuesto
+        </span>
+        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
+          className="text-xs font-semibold text-accent hover:text-indigo-300 transition-colors flex items-center gap-1.5 bg-accent/10 px-2.5 py-1 rounded-lg">
+          <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
+        </button>
+      </div>
+
+      {budget > 0 ? (
+        <div className="pt-1">
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpent)}</div>
+              <div className="text-xs text-dim mt-1 font-medium">de {fmtEur(budget)} marcados</div>
+            </div>
+            <div className="font-mono text-sm font-bold bg-[#1c1c25] px-2 py-1 rounded-md border border-white/5" style={{color:barClr}}>{pct.toFixed(1)}%</div>
+          </div>
+          <ProgBar pct={pct} color={barClr} big/>
+          {over && <p className="text-xs font-semibold text-spend flex items-center gap-1.5 mt-3"><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
+           <LI name="Crosshair" size={24} className="text-dim"/>
+           <p className="text-sm text-dim text-center">Sin límite este mes.</p>
+        </div>
+      )}
+
+      {editing && (
+        <Modal title="Ajustar Presupuesto" onClose={()=>setEditing(false)}>
+          <div className="space-y-5">
+            <div>
+              <label className="f-label">Límite de gasto (€)</label>
+              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
+                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
+            </div>
+            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg">
+              Confirmar
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: BY CATEGORY
+// ══════════════════════════════════════════════
+function CategoryWidget({ monthTx }) {
+  const expenses = monthTx.filter(t=>t.type==='expense');
+  const total    = expenses.reduce((s,t)=>s+t.amount,0)||1;
+  const data     = TIPOS.map(tipo=>{
+    const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
+    return { tipo, sum, pct:(sum/total)*100 };
+  }).filter(d=>d.sum>0).sort((a,b)=>b.sum-a.sum);
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="border-b border-border/50 pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="PieChart" size={14}/> Categorías
+        </span>
+      </div>
+      
+      {data.length===0
+        ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
+            <LI name="BarChart" size={24} className="text-dim"/>
+            <p className="text-sm text-dim text-center">Sin datos todavía.</p>
+          </div>
+        : <div className="space-y-4 pt-1">
+            {data.map(({ tipo, sum, pct })=>(
+              <div key={tipo}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+                  <div className="flex gap-2.5 items-center">
+                    <span className="font-mono text-xs text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
+                    <span className="font-mono text-[13px] font-bold text-bright">{fmtEur(sum)}</span>
+                  </div>
+                </div>
+                <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
+              </div>
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: SAVINGS GOALS
+// ══════════════════════════════════════════════
+function GoalsWidget() {
+  const [goals, setGoals]   = useState(()=>ls(KEYS.GOALS,[]));
+  const [newModal, setNew]  = useState(false);
+  const [addModal, setAdd]  = useState(null);
+  const [nf, setNf]         = useState({ name:'', target:'', saved:'' });
+  const [addAmt, setAddAmt] = useState('');
+
+  const persist = (g) => { setGoals(g); lsSet(KEYS.GOALS,g); };
+
+  const createGoal = () => {
+    const t=parseFloat(nf.target), s=parseFloat(nf.saved)||0;
+    if (!nf.name.trim()||isNaN(t)||t<=0) return;
+    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s }]);
+    setNf({name:'',target:'',saved:''}); setNew(false);
+  };
+
+  const addToGoal = (id) => {
+    const v=parseFloat(addAmt); if(isNaN(v)||v<=0) return;
+    persist(goals.map(g=>g.id===id?{...g,saved:Math.min(g.saved+v,g.target)}:g));
+    setAddAmt(''); setAdd(null);
+  };
+
+  const deleteGoal = (id) => persist(goals.filter(g=>g.id!==id));
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b border-border/50 pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="Star" size={14}/> Metas
+        </span>
+        <button onClick={()=>setNew(true)} className="text-xs font-semibold text-gold hover:text-yellow-200 transition-colors flex items-center gap-1.5 bg-gold/10 px-2.5 py-1 rounded-lg">
+          <LI name="Plus" size={12}/> Nueva
+        </button>
+      </div>
+
+      {goals.length===0
+        ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
+            <LI name="PiggyBank" size={24} className="text-dim"/>
+            <p className="text-sm text-dim text-center">Crea tu primera meta.</p>
+          </div>
+        : <div className="space-y-5 pt-1">
+            {goals.map(g=>{
+              const pct=(g.saved/g.target)*100;
+              const done=pct>=100;
+              const clr=done?'#34d399':pct>50?'#fbbf24':'#818cf8';
+              return (
+                <div key={g.id} className="space-y-2.5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-[14.5px] text-bright flex items-center gap-2">
+                        {done && <span className="bg-[#34d39920] p-0.5 rounded-md" style={{color:'#34d399'}}><LI name="Check" size={12}/></span>}
+                        {g.name}
+                      </div>
+                      <div className="font-mono text-xs text-dim mt-1">{fmtEur(g.saved)} de {fmtEur(g.target)}</div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {!done && (
+                        <button onClick={()=>{setAdd(g.id);setAddAmt('');}}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                          style={{background:'#818cf820',color:'#818cf8',border:'1px solid #818cf840'}}>
+                          <LI name="TrendingUp" size={13}/>
+                        </button>
+                      )}
+                      <button onClick={()=>deleteGoal(g.id)} className="text-dim hover:text-spend p-1.5 rounded-lg hover:bg-spend/10 transition-colors">
+                        <LI name="Trash2" size={14}/>
+                      </button>
+                    </div>
+                  </div>
+                  <ProgBar pct={pct} color={clr}/>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {/* New goal modal */}
+      {newModal && (
+        <Modal title="Nueva meta" onClose={()=>setNew(false)}>
+          <div className="space-y-5">
+            <div><label className="f-label">Nombre de la meta</label>
+              <input type="text" className="f-input" placeholder="Ej: Viaje a Japón" value={nf.name} onChange={e=>setNf(p=>({...p,name:e.target.value}))} autoFocus/></div>
+            <div><label className="f-label">Objetivo (€)</label>
+              <input type="number" min="1" step="10" className="f-input font-mono" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
+            <div><label className="f-label">Ya ahorrado (€)</label>
+              <input type="number" min="0" step="10" className="f-input font-mono" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
+            <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-gold/20 border border-gold/40 text-gold hover:bg-gold/30 transition-all shadow-lg">
+              Empezar ahorro
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add money modal */}
+      {addModal && (
+        <Modal title="Ingresar ahorro" onClose={()=>setAdd(null)}>
+          <div className="space-y-5">
+            <p className="text-[15px] text-dim">Sumar dinero a la meta <span className="text-bright font-bold italic">"{goals.find(g=>g.id===addModal)?.name}"</span></p>
+            <div><label className="f-label">Cantidad a ingresar (€)</label>
+              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="100.00" value={addAmt} onChange={e=>setAddAmt(e.target.value)} autoFocus/></div>
+            <button onClick={()=>addToGoal(addModal)} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg">
+              Confirmar ingreso
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  MAIN APP
+// ══════════════════════════════════════════════
+function App() {
+  const now = new Date();
+  const [txs, setTxs]       = useState(()=>ls(KEYS.TX,[]));
+  const [month, setMonth]   = useState(now.getMonth());
+  const [year, setYear]     = useState(now.getFullYear());
+  const [filter, setFilter] = useState('all');
+  const [addModal, setAdd]  = useState(null); 
+  const [toast, setToast]   = useState(null);
+  const fileRef             = useRef();
+
+  useEffect(()=>lsSet(KEYS.TX,txs),[txs]);
+
+  const showToast = (msg, color='#34d399') => {
+    setToast({msg,color}); setTimeout(()=>setToast(null),2600);
+  };
+
+  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
+
+  const monthTx = useMemo(()=>
+    txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===month&&d.getFullYear()===year;})
+       .sort((a,b)=>new Date(b.date)-new Date(a.date))
+  ,[txs,month,year]);
+
+  const totalSpend  = useMemo(()=>monthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),[monthTx]);
+  const totalIncome = useMemo(()=>monthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),[monthTx]);
+  const balance     = totalIncome-totalSpend;
+  const budgetPct   = totalIncome>0 ? (totalSpend/totalIncome)*100 : 0;
+
+  const tipoData = useMemo(()=>{
+    const exp=monthTx.filter(t=>t.type==='expense'), tot=exp.reduce((s,t)=>s+t.amount,0)||1;
+    return TIPOS.map(tipo=>({ tipo, sum:exp.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0), pct:0 }))
+                .map(d=>({...d,pct:(d.sum/tot)*100}));
+  },[monthTx]);
+
+  const displayTx = useMemo(()=>filter==='all'?monthTx:monthTx.filter(t=>t.type===filter),[monthTx,filter]);
+
+  const prevMonth = ()=>{ if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1); };
+  const nextMonth = ()=>{ if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1); };
+
+  const saveTx = (tx) => { setTxs(p=>[tx,...p]); showToast('Movimiento registrado',tx.type==='income'?'#34d399':'#f87171'); };
+  const delTx  = (id) => { setTxs(p=>p.filter(t=>t.id!==id)); showToast('Eliminado','#f87171'); };
+
+  const doExport = ()=>{ exportCSV(txs,month,year); showToast(`Exportado: ${MONTHS[month]} ${year}`); };
+  const doImport = (e)=>{
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      const parsed=parseCSV(ev.target.result);
+      if(!parsed.length){showToast('CSV vacío o inválido','#f87171');return;}
+      setTxs(prev=>{ const ids=new Set(prev.map(t=>t.id)); return [...prev,...parsed.filter(t=>!ids.has(t.id))]; });
+      showToast(`${parsed.length} movimientos importados`);
+    };
+    r.readAsText(f); e.target.value='';
+  };
+
+  const segBtn = (label,val)=>(
+    <button onClick={()=>setFilter(val)} className={`seg-btn ${filter===val?'active':''}`}>{label}</button>
+  );
+
+  return (
+    <div className="min-h-screen px-4 py-8 max-w-[1200px] mx-auto space-y-6">
+      {toast && <Toast msg={toast.msg} color={toast.color}/>}
+      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={doImport}/>
+
+      {/* ── HEADER ── */}
+      <header className="flex items-center justify-between gap-6 flex-wrap pb-2">
+        <div className="flex items-center gap-4">
+          <img src="icon.png" alt="Logo" className="w-11 h-11 rounded-2xl object-cover shadow-xl border border-white/10"
+               onError={e=>{ e.target.style.display='none'; }}/>
+          <div>
+            <h1 className="font-serif text-[28px] italic leading-none tracking-tight text-bright">ZenGastos</h1>
+            <p className="text-[11px] text-dim font-mono mt-1 tracking-widest uppercase">finanzas compartidas</p>
+          </div>
+        </div>
+
+        <div className="glass rounded-xl flex items-center gap-1 p-1 shadow-lg">
+          <button onClick={prevMonth} className="p-2.5 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+            <LI name="ChevronLeft" size={18}/>
+          </button>
+          <span className="px-4 font-semibold text-[15px] min-w-[150px] text-center">
+            {MONTHS[month]} <span className="font-mono text-dim ml-1">{year}</span>
+          </span>
+          <button onClick={nextMonth} className="p-2.5 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+            <LI name="ChevronRight" size={18}/>
+          </button>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={doExport}
+            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold text-dim hover:text-bright transition-all hover:bg-raised shadow-md">
+            <LI name="Download" size={15}/> Exportar
+          </button>
+          <button onClick={()=>fileRef.current.click()}
+            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold text-dim hover:text-bright transition-all hover:bg-raised shadow-md">
+            <LI name="Upload" size={15}/> Importar
+          </button>
+        </div>
+      </header>
+
+      {/* ── SUMMARY CARDS ── */}
+      <div className="grid grid-cols-4 gap-4 summary-4">
+        <SummaryCard label="Gastos" value={fmtEur(totalSpend)} color="#f87171"
+          sub="este mes" icon={<LI name="TrendingDown" size={16}/>} delay="delay-1"/>
+        <SummaryCard label="Ingresos" value={fmtEur(totalIncome)} color="#34d399"
+          sub="este mes" icon={<LI name="TrendingUp" size={16}/>} delay="delay-2"/>
+        <SummaryCard label="Balance" value={fmtEur(balance)} color={balance>=0?'#34d399':'#f87171'}
+          sub={balance>=0?'en positivo':'en déficit'} icon={<LI name="Wallet" size={16}/>} delay="delay-3"/>
+        <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)+'%'} color="#818cf8"
+          sub={totalIncome>0?`${fmtEur(totalSpend)} de ${fmtEur(totalIncome)}`:'sin ingresos'}
+          icon={<LI name="Activity" size={16}/>} delay="delay-4"/>
+      </div>
+
+      {/* ── TIPO BREAKDOWN ── */}
+      <div className="grid grid-cols-4 gap-4 cat-4">
+        {tipoData.map(({tipo,sum,pct})=>(
+          <div key={tipo} className="glass rounded-2xl p-5 space-y-3.5 anim-fadeup">
+            <div className="flex justify-between items-center">
+              <span className="text-[11px] font-bold uppercase tracking-widest" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+              <span className="font-mono text-[11px] text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
+            </div>
+            <div className="font-mono font-bold text-lg text-bright">{fmtEur(sum)}</div>
+            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
+          </div>
+        ))}
+      </div>
+
+      {/* ── MAIN 2-COLUMN GRID ── */}
+      <div className="grid gap-6 two-col" style={{gridTemplateColumns:'1fr 380px'}}>
+
+        {/* LEFT: Transactions */}
+        <div className="glass rounded-2xl p-6 space-y-5 flex flex-col min-h-[500px]">
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border/50 pb-4">
+            <div className="seg-wrap w-full max-w-[300px]">
+              {segBtn('Todo','all')}
+              {segBtn('Gastos','expense')}
+              {segBtn('Ingresos','income')}
+            </div>
+            <span className="font-mono text-xs font-medium text-dim bg-raised px-3 py-1.5 rounded-lg border border-white/5">{displayTx.length} items</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={()=>setAdd('expense')} className="btn-spend flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+              <LI name="MinusCircle" size={18}/> Añadir Gasto
+            </button>
+            <button onClick={()=>setAdd('income')} className="btn-income flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+              <LI name="PlusCircle" size={18}/> Añadir Ingreso
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2 space-y-1 mt-2">
+            {displayTx.length===0
+              ? <div className="h-full flex flex-col items-center justify-center py-16 space-y-4 opacity-40">
+                  <LI name="Receipt" size={48} className="text-dim"/>
+                  <p className="text-[15px] font-medium text-dim">Sin movimientos en este mes</p>
+                </div>
+              : displayTx.map(tx=><TxRow key={tx.id} tx={tx} onDelete={delTx}/>)
+            }
+          </div>
+        </div>
+
+        {/* RIGHT: Widgets */}
+        <div className="space-y-6">
+          <SettlementWidget monthTx={monthTx} />
+          <BalanceChartWidget totalIncome={totalIncome} totalSpend={totalSpend} />
+          <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
+          <CategoryWidget monthTx={monthTx}/>
+          <GoalsWidget/>
+        </div>
+      </div>
+
+      <p className="text-center text-[11px] text-dim font-mono pt-6 pb-2 opacity-50 tracking-widest uppercase">
+        ZenGastos Pro · {txs.length} Registros Locales
+      </p>
+
+      {/* Add TX Modal */}
+      {addModal && <AddTxModal type={addModal} onSave={saveTx} onClose={()=>setAdd(null)} month={month} year={year}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js')
+      .catch(e=>console.warn('[ZenGastos] SW error',e));
+  });
+}
+</script>
+</body>
+</html>
