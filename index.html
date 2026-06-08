@@ -294,6 +294,80 @@ function SummaryCard({ label, value, color, sub, icon, delay='' }) {
 }
 
 // ══════════════════════════════════════════════
+//  WIDGET: SETTLEMENT (CUENTAS CLARAS)
+// ══════════════════════════════════════════════
+function SettlementWidget({ monthTx }) {
+  // Solo tenemos en cuenta los gastos (no ingresos) que sean "Comunes"
+  const sharedExp = monthTx.filter(t => t.type === 'expense' && t.scope === 'Común');
+
+  const user1 = USERS[0]; // Tú
+  const user2 = USERS[1]; // Tu pareja
+
+  const paidUser1 = sharedExp.filter(t => t.paidBy === user1).reduce((s,t) => s + t.amount, 0);
+  const paidUser2 = sharedExp.filter(t => t.paidBy === user2).reduce((s,t) => s + t.amount, 0);
+
+  const totalShared = paidUser1 + paidUser2;
+  const half = totalShared / 2;
+
+  // Si diff > 0, significa que esa persona ha pagado más de la mitad y se le debe dinero
+  const diff1 = paidUser1 - half;
+  const diff2 = paidUser2 - half;
+
+  let statusMsg = "Estáis en paz";
+  let statusColor = "#73738c"; // dim
+  let subMsg = "Ambos habéis aportado lo mismo.";
+  let glowColor = "rgba(115, 115, 140, 0.2)";
+
+  if (diff1 > 0) {
+    statusMsg = `${user2} te debe`;
+    subMsg = fmtEur(diff1);
+    statusColor = "#34d399"; // Verde (te llega dinero)
+    glowColor = "rgba(52, 211, 153, 0.2)";
+  } else if (diff2 > 0) {
+    statusMsg = `Debes a ${user2}`;
+    subMsg = fmtEur(diff2);
+    statusColor = "#f87171"; // Rojo (tienes que pagar)
+    glowColor = "rgba(248, 113, 113, 0.2)";
+  } else if (totalShared > 0) {
+    statusMsg = "Cuentas saldadas 🤝";
+    subMsg = "0,00 € pendientes";
+    statusColor = "#818cf8";
+    glowColor = "rgba(129, 140, 248, 0.2)";
+  }
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5 relative overflow-hidden">
+      {/* Fondo luminoso dinámico */}
+      <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-40 pointer-events-none rounded-full" style={{ background: glowColor, transform: 'translate(30%, -30%)' }}></div>
+
+      <div className="border-b border-border/50 pb-3 relative z-10">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+          <LI name="Scale" size={14}/> Cuentas Claras
+        </span>
+      </div>
+      
+      <div className="flex justify-between items-center bg-[#1c1c25] p-4 rounded-xl border border-white/5 relative z-10">
+        <div className="text-center w-1/2 border-r border-white/5">
+          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user1}</p>
+          <p className="font-mono font-bold text-[#818cf8]">{fmtEur(paidUser1)}</p>
+        </div>
+        <div className="text-center w-1/2">
+          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user2}</p>
+          <p className="font-mono font-bold text-[#fbbf24]">{fmtEur(paidUser2)}</p>
+        </div>
+      </div>
+
+      <div className="text-center pt-2 relative z-10">
+        <p className="text-[11px] font-bold text-dim uppercase tracking-widest mb-1.5">{statusMsg}</p>
+        <p className="font-mono text-[26px] font-bold tracking-tight" style={{color: statusColor, textShadow: `0 2px 16px ${glowColor}`}}>
+          {totalShared === 0 ? 'Sin gastos comunes' : subMsg}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
 //  WIDGET: CHART 
 // ══════════════════════════════════════════════
 function BalanceChartWidget({ totalIncome, totalSpend }) {
@@ -842,6 +916,7 @@ function App() {
 
         {/* RIGHT: Widgets */}
         <div className="space-y-6">
+          <SettlementWidget monthTx={monthTx} />
           <BalanceChartWidget totalIncome={totalIncome} totalSpend={totalSpend} />
           <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
           <CategoryWidget monthTx={monthTx}/>
