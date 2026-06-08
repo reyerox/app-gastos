@@ -171,7 +171,9 @@ const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ago
 const TIPOS     = ['Obligatorios','Opcionales','Ocio','Inversiones','Otros'];
 const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Inversiones:'#a855f7', Otros:'#94a3b8' };
 const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Inversiones:'#a855f715', Otros:'#94a3b815' };
-const USERS     = ['Dani 🦭​','Nati 🌻'];
+
+// NOMBRES ACTUALIZADOS AQUÍ
+const USERS     = ['Dani 🦭', 'Nati 🌻'];
 
 const KEYS = {
   TX:      'zg_transactions',
@@ -180,15 +182,56 @@ const KEYS = {
 };
 
 const genId   = () => `${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
-const ls      = (k, fb=[]) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fb; } catch { return fb; } };
-const lsSet   = (k,v) => localStorage.setItem(k, JSON.stringify(v));
-const fmtEur  = (n) => n.toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+
+// BLINDAJE: Evitar que el navegador bloquee la app si el LocalStorage está protegido (ej: Brave en modo Archivo Local)
+const ls = (k, fb=[]) => { 
+  try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fb; } 
+  catch(e) { console.warn('LocalStorage lectura bloqueada:', e); return fb; } 
+};
+const lsSet = (k,v) => { 
+  try { localStorage.setItem(k, JSON.stringify(v)); } 
+  catch(e) { console.warn('LocalStorage escritura bloqueada por seguridad del navegador:', e); } 
+};
+
+const fmtEur  = (n) => {
+  if(isNaN(n) || n === null || n === undefined) return '0,00 €';
+  return Number(n).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' €';
+};
 const clamp   = (n,lo,hi) => Math.max(lo, Math.min(hi, n));
+
+// ══════════════════════════════════════════════
+//  ERROR BOUNDARY (Pantalla anti-negro)
+// ══════════════════════════════════════════════
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorInfo: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorInfo: error.toString() };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Error crítico capturado:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '30px', color: '#f87171', fontFamily: 'monospace', maxWidth: '800px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>⚠️ Ups, la aplicación ha chocado con un error</h2>
+          <p style={{ color: '#f4f4f5' }}>Por favor, pásale este texto exacto a la IA para que lo arregle al instante:</p>
+          <pre style={{ background: '#1c1c25', padding: '20px', borderRadius: '12px', marginTop: '15px', whiteSpace: 'pre-wrap', border: '1px solid #f8717140' }}>
+            {this.state.errorInfo}
+          </pre>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
 
 // ══════════════════════════════════════════════
 //  CSV
 // ══════════════════════════════════════════════
-// Añadido customTipo al final para no romper CSVs antiguos
 const CSV_HDR = ['id','date','type','concept','amount','tipo','paidBy','scope','customTipo'];
 
 function exportCSV(txs, month, year) {
@@ -216,9 +259,11 @@ function parseCSV(text) {
       else if (ch===',' && !inQ) { cols.push(cur.trim()); cur=''; }
       else cur+=ch;
     }
+    const dateVal = cols[idx('date')];
+    const dateStr = dateVal ? dateVal.trim() : new Date().toISOString().slice(0,10);
     const t = {
       id:         cols[idx('id')]        || genId(),
-      date:       cols[idx('date')]      || new Date().toISOString().slice(0,10),
+      date:       dateStr,
       type:       cols[idx('type')]      || 'expense',
       concept:    cols[idx('concept')]   || '',
       amount:     parseFloat(cols[idx('amount')]) || 0,
@@ -299,7 +344,9 @@ function SummaryCard({ label, value, color, sub, icon, delay='' }) {
 //  WIDGET: SETTLEMENT (CUENTAS CLARAS)
 // ══════════════════════════════════════════════
 function SettlementWidget({ monthTx }) {
-  const sharedExp = monthTx.filter(t => t.type === 'expense' && t.scope === 'Común');
+  // Convertimos automáticamente a "Común" los gastos antiguos que no tenían etiqueta
+  const sharedExp = monthTx.filter(t => t.type === 'expense' && (t.scope === 'Común' || !t.scope));
+  
   const user1 = USERS[0];
   const user2 = USERS[1];
 
@@ -407,9 +454,17 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
   const defDate = new Date(year, month, year===today.getFullYear()&&month===today.getMonth() ? today.getDate() : 1)
     .toISOString().slice(0,10);
   
-  // Initialize with initialData if editing, else defaults
-  const [f, setF] = useState(initialData || { 
-    concept:'', amount:'', tipo:TIPOS[0], customTipo:'', paidBy:USERS[0], date:defDate, scope:'Común' 
+  const [f, setF] = useState(() => {
+    if (initialData) {
+      return {
+        ...initialData,
+        scope: initialData.scope || 'Común', // Si editamos, recuerda si era común
+        customTipo: initialData.customTipo || '',
+        paidBy: initialData.paidBy || USERS[0]
+      };
+    }
+    // Valores por defecto al crear uno nuevo
+    return { concept:'', amount:'', tipo:TIPOS[0], customTipo:'', paidBy:USERS[0], date:defDate, scope:'Personal' };
   });
   
   const set = (k,v) => setF(p=>({...p,[k]:v}));
@@ -417,7 +472,7 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
   const isEdit = !!initialData;
 
   const save = () => {
-    if (!f.concept.trim() || parseFloat(f.amount)<=0) return;
+    if (!f.concept.trim() || parseFloat(f.amount)<=0 || !f.date) return;
     onSave({ 
       id: isEdit ? initialData.id : genId(), 
       date: f.date, 
@@ -461,30 +516,34 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
         {f.tipo === 'Otros' && (
           <div className="anim-fadeup">
             <label className="f-label">Etiqueta Personalizada</label>
-            <input type="text" className="f-input" placeholder="Ej: Mascotas, Regalos..." value={f.customTipo} onChange={e=>set('customTipo',e.target.value)}/>
+            <input type="text" className="f-input" placeholder="Ej: Mascotas, Regalos..." value={f.customTipo || ''} onChange={e=>set('customTipo',e.target.value)}/>
           </div>
         )}
         
         <div>
           <label className="f-label">¿Para quién es?</label>
           <div className="seg-wrap">
-            <button onClick={()=>set('scope','Común')} className={`seg-btn ${f.scope==='Común'?'active':''}`}>🏠 Común</button>
             <button onClick={()=>set('scope','Personal')} className={`seg-btn ${f.scope==='Personal'?'active':''}`}>👤 Personal</button>
+            <button onClick={()=>set('scope','Común')} className={`seg-btn ${f.scope==='Común'?'active':''}`}>🏠 Común</button>
           </div>
         </div>
 
-        <div>
-          <label className="f-label">¿Quién {isIncome ? 'lo ingresa' : 'paga'}?</label>
-          <div className="grid grid-cols-2 gap-3">
-            {USERS.map(u=>(
-              <button key={u} onClick={()=>set('paidBy',u)}
-                className="py-3 rounded-xl text-sm font-semibold transition-all shadow-sm"
-                style={{ background: f.paidBy===u?'#818cf820':'#1c1c25', border:`1px solid ${f.paidBy===u?'#818cf8':'#26262f'}`, color: f.paidBy===u?'#a5b4fc':'#8888a0' }}>
-                {u}
-              </button>
-            ))}
+        {/* Solo mostramos la selección de usuario si el gasto es Común */}
+        {f.scope === 'Común' && (
+          <div className="anim-fadeup">
+            <label className="f-label">¿Quién {isIncome ? 'lo ingresa' : 'paga'}?</label>
+            <div className="grid grid-cols-2 gap-3">
+              {USERS.map(u=>(
+                <button key={u} onClick={()=>set('paidBy',u)}
+                  className="py-3 rounded-xl text-sm font-semibold transition-all shadow-sm"
+                  style={{ background: f.paidBy===u?'#818cf820':'#1c1c25', border:`1px solid ${f.paidBy===u?'#818cf8':'#26262f'}`, color: f.paidBy===u?'#a5b4fc':'#8888a0' }}>
+                  {u}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
         <button onClick={save}
           className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all mt-2 shadow-lg"
           style={{ background: isEdit?'#3b82f640':(isIncome?'#065f4640':'#7f1d1d40'), border:`1px solid ${isEdit?'#3b82f660':(isIncome?'#34d39960':'#f8717160')}`, color: isEdit?'#60a5fa':(isIncome?'#34d399':'#f87171') }}>
@@ -502,14 +561,25 @@ function TxRow({ tx, onEdit, onDelete }) {
   const isIn = tx.type==='income';
   const clr  = isIn ? '#34d399' : '#f87171';
   const bg   = isIn ? '#34d39915' : '#f8717115';
-  const isPersonal = tx.scope === 'Personal';
-  const dateStr = new Date(tx.date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
   
-  // Si es tipo "Otros" y ha escrito algo, mostramos su texto. Si no, mostramos "Otros".
+  // Etiqueta visual de categoría (ej: "Mascotas" si era "Otros")
   const displayTag = (tx.tipo === 'Otros' && tx.customTipo) ? tx.customTipo : tx.tipo;
   const tagColor = TIPO_CLR[tx.tipo] || '#888';
   const tagBg = TIPO_BG[tx.tipo] || '#26262f';
 
+  const actualScope = tx.scope || 'Común'; 
+  const isPersonal = actualScope === 'Personal';
+  const scopeLabel = isPersonal ? '👤 Personal' : '🏠 Común';
+  const scopeColor = isPersonal ? '#818cf8' : '#34d399';
+  const scopeBg    = isPersonal ? '#818cf820' : '#34d39920';
+
+  let dateStr = '';
+  try {
+    dateStr = new Date(tx.date+'T12:00:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short'});
+  } catch {
+    dateStr = tx.date || 'Sin fecha';
+  }
+  
   return (
     <div className="tx-row flex items-center gap-3.5 px-3.5 py-3 anim-slidein">
       <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border border-white/5" style={{background:bg}}>
@@ -521,11 +591,11 @@ function TxRow({ tx, onEdit, onDelete }) {
           <span className="chip border border-white/5" style={{background:tagBg, color:tagColor}}>
             {displayTag}
           </span>
-          {isPersonal && (
-            <span className="chip border border-white/5" style={{background:'#818cf820', color:'#818cf8'}}>
-              👤 Personal
-            </span>
-          )}
+          
+          <span className="chip border border-white/5" style={{background:scopeBg, color:scopeColor}}>
+            {scopeLabel}
+          </span>
+
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[11.5px] text-dim font-medium">{dateStr}</span>
@@ -534,7 +604,7 @@ function TxRow({ tx, onEdit, onDelete }) {
         </div>
       </div>
       
-      {/* Botones de Acción (Editar y Borrar) */}
+      {/* Botones de Acción */}
       <div className="flex items-center gap-1 flex-shrink-0">
         <span className="font-mono text-[15px] font-bold mr-2" style={{color:clr}}>
           {isIn?'+':'-'}{fmtEur(tx.amount)}
@@ -626,9 +696,8 @@ function BudgetWidget({ monthKey, totalSpent }) {
 // ══════════════════════════════════════════════
 function CategoryWidget({ monthTx }) {
   const expenses = monthTx.filter(t=>t.type==='expense');
-  const total    = expenses.reduce((s,t)=>s+t.amount,0) || 1; // Para evitar división por 0
+  const total    = expenses.reduce((s,t)=>s+t.amount,0) || 1; 
   
-  // Quitamos el ".filter(d=>d.sum>0)" para que siempre salgan todas las categorías, incluso las de 0%
   const data = TIPOS.map(tipo => {
     const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
     return { tipo, sum, pct:(sum/total)*100 };
@@ -782,7 +851,6 @@ function App() {
   const [year, setYear]     = useState(now.getFullYear());
   const [filter, setFilter] = useState('all');
   
-  // El modal ahora recibe un objeto { open: true/false, type: 'income'/'expense', tx: null (nuevo) o tx_object (editar) }
   const [modalConfig, setModalConfig] = useState({ open: false, type: 'expense', tx: null }); 
   
   const [toast, setToast]   = useState(null);
@@ -900,7 +968,7 @@ function App() {
       </div>
 
       {/* ── TIPO BREAKDOWN ── */}
-      <div className="grid grid-cols-4 gap-4 cat-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {tipoData.map(({tipo,sum,pct})=>(
           <div key={tipo} className="glass rounded-2xl p-5 space-y-3.5 anim-fadeup">
             <div className="flex justify-between items-center">
@@ -976,7 +1044,12 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+// Envolver en ErrorBoundary para evitar pantallas negras
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <ErrorBoundary>
+    <App/>
+  </ErrorBoundary>
+);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', ()=>{
