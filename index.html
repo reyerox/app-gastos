@@ -148,14 +148,14 @@
     .chip { 
       display: inline-flex; 
       align-items: center; 
-      gap: 4px; /* Espacio sutil entre emoji y texto */
-      padding: 3px 10px; /* Relleno optimizado */
+      gap: 4px; 
+      padding: 3px 10px; 
       border-radius: 99px; 
       font-family: 'Space Grotesk', monospace; 
       font-size: 10.5px; 
       font-weight: 600; 
       letter-spacing: 0.02em; 
-      line-height: 1.2; /* Evita que el emoji ensanche la pastilla */
+      line-height: 1.2; 
       white-space: nowrap; 
       user-select: none; 
     }
@@ -373,11 +373,18 @@ function ProgBar({ pct, color, big=false }) {
   );
 }
 
-function SummaryCard({ label, value, color, sub, icon, delay='' }) {
+function SummaryCard({ label, value, color, sub, icon, delay='', diff }) {
   return (
     <div className={`glass rounded-2xl p-5 flex flex-col gap-2 anim-fadeup ${delay}`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>{label}</span>
+          {diff && (
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border" style={{color: diff.color, background: diff.bg, borderColor: 'var(--chip-border)'}}>
+              {diff.formatted}
+            </span>
+          )}
+        </div>
         {icon && <span style={{color: 'var(--text-dim)', opacity: 0.7}}>{icon}</span>}
       </div>
       <span className="font-mono text-[22px] font-bold" style={{color, textShadow: `0 2px 10px ${color}20`}}>{value}</span>
@@ -450,6 +457,50 @@ function SettlementWidget({ monthTx }) {
           {totalShared === 0 ? 'Sin gastos comunes' : subMsg}
         </p>
       </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: ANÁLISIS DEL MES
+// ══════════════════════════════════════════════
+function MonthSummaryWidget({ balance }) {
+  const isPositive = balance >= 0;
+  const color = isPositive ? 'var(--income-color)' : 'var(--spend-color)';
+  const glow = isPositive ? 'var(--income-bg)' : 'var(--spend-bg)';
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-40 pointer-events-none rounded-full" style={{ background: glow, transform: 'translate(30%, -30%)' }}></div>
+      <div className="border-b pb-3 relative z-10" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
+          <LI name="Lightbulb" size={14}/> Análisis del Mes
+        </span>
+      </div>
+      
+      <div className="relative z-10 text-center space-y-3 pt-2">
+        <p className="text-[13px] font-medium" style={{color: 'var(--text-main)'}}>
+          {isPositive 
+            ? '¡Buen trabajo! Has ingresado más de lo que has gastado.' 
+            : 'Cuidado, tus gastos superan a tus ingresos este mes.'}
+        </p>
+        
+        <div className="font-mono text-[32px] font-bold tracking-tight" style={{color: color, textShadow: `0 2px 16px ${glow}`}}>
+          {fmtEur(balance)}
+        </div>
+        
+        <p className="text-[10px] uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>
+          {isPositive ? 'Sobrante disponible' : 'Déficit actual'}
+        </p>
+      </div>
+
+      {isPositive && balance > 0 && (
+        <div className="p-4 rounded-xl relative z-10 text-center" style={{background: 'var(--raised-bg)', border: '1px dashed var(--border-color)'}}>
+          <p className="text-[11.5px]" style={{color: 'var(--text-dim)'}}>
+            💡 <strong style={{color: 'var(--text-main)'}}>Consejo Zen:</strong> Tu meta automática está sumando todo tu sobrante histórico. ¡Sigue así!
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -556,7 +607,6 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year, theme }) 
           </div>
         </div>
 
-        {/* Input Dinámico para Etiqueta Custom si elige "Otros" */}
         {f.tipo === 'Otros' && (
           <div className="anim-fadeup">
             <label className="f-label">Etiqueta Personalizada</label>
@@ -620,7 +670,6 @@ function TxRow({ tx, onEdit, onDelete }) {
   const actualScope = tx.scope || 'Común'; 
   const isPersonal = actualScope === 'Personal';
   
-  // AQUÍ VUELVEN A ESTAR LOS EMOJIS EN LA LISTA
   const scopeLabel = isPersonal ? '👤 Personal' : '🏠 Común';
   const scopeColor = isPersonal ? 'var(--accent-color)' : 'var(--income-color)';
   const scopeBg    = isPersonal ? 'var(--accent-bg)' : 'var(--income-bg)';
@@ -670,79 +719,6 @@ function TxRow({ tx, onEdit, onDelete }) {
 }
 
 // ══════════════════════════════════════════════
-//  WIDGET: MONTHLY BUDGET
-// ══════════════════════════════════════════════
-function BudgetWidget({ monthKey, totalSpend }) {
-  const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft]     = useState('');
-
-  const budget = budgets[monthKey] || 0;
-  const pct    = budget > 0 ? (totalSpend/budget)*100 : 0;
-  const over   = pct > 100;
-  const barClr = over ? 'var(--spend-color)' : pct>80 ? 'var(--gold-color)' : 'var(--income-color)';
-
-  const save = () => {
-    const v = parseFloat(draft);
-    if (!isNaN(v) && v>0) {
-      const next = {...budgets,[monthKey]:v};
-      setBudgets(next); lsSet(KEYS.BUDGET,next);
-    }
-    setEditing(false);
-  };
-
-  return (
-    <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
-        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
-          <LI name="Target" size={14}/> Presupuesto
-        </span>
-        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
-          className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-          style={{color: 'var(--accent-color)', background: 'var(--accent-bg)'}}>
-          <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
-        </button>
-      </div>
-
-      {budget > 0 ? (
-        <div className="pt-1">
-          <div className="flex justify-between items-end mb-3">
-            <div>
-              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpend)}</div>
-              <div className="text-xs mt-1 font-medium" style={{color: 'var(--text-dim)'}}>de {fmtEur(budget)} marcados</div>
-            </div>
-            <div className="font-mono text-sm font-bold px-2 py-1 rounded-md border" style={{color:barClr, background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(1)}%</div>
-          </div>
-          <ProgBar pct={pct} color={barClr} big/>
-          {over && <p className="text-xs font-semibold flex items-center gap-1.5 mt-3" style={{color: 'var(--spend-color)'}}><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
-           <LI name="Crosshair" size={24} style={{color: 'var(--text-dim)'}}/>
-           <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Sin límite este mes.</p>
-        </div>
-      )}
-
-      {editing && (
-        <Modal title="Ajustar Presupuesto" onClose={()=>setEditing(false)}>
-          <div className="space-y-5">
-            <div>
-              <label className="f-label">Límite de gasto (€)</label>
-              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
-                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
-            </div>
-            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
-              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
-              Confirmar
-            </button>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
 //  WIDGET: BY CATEGORY
 // ══════════════════════════════════════════════
 function CategoryWidget({ monthTx }) {
@@ -781,13 +757,86 @@ function CategoryWidget({ monthTx }) {
 }
 
 // ══════════════════════════════════════════════
-//  WIDGET: SAVINGS GOALS
+//  WIDGET: MONTHLY BUDGET
 // ══════════════════════════════════════════════
-function GoalsWidget() {
+function BudgetWidget({ monthKey, totalSpent }) {
+  const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState('');
+
+  const budget = budgets[monthKey] || 0;
+  const pct    = budget > 0 ? (totalSpent/budget)*100 : 0;
+  const over   = pct > 100;
+  const barClr = over ? 'var(--spend-color)' : pct>80 ? 'var(--gold-color)' : 'var(--income-color)';
+
+  const save = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v>0) {
+      const next = {...budgets,[monthKey]:v};
+      setBudgets(next); lsSet(KEYS.BUDGET,next);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
+          <LI name="Target" size={14}/> Presupuesto
+        </span>
+        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
+          className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{color: 'var(--accent-color)', background: 'var(--accent-bg)'}}>
+          <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
+        </button>
+      </div>
+
+      {budget > 0 ? (
+        <div className="pt-1">
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpent)}</div>
+              <div className="text-xs mt-1 font-medium" style={{color: 'var(--text-dim)'}}>de {fmtEur(budget)} marcados</div>
+            </div>
+            <div className="font-mono text-sm font-bold px-2 py-1 rounded-md border" style={{color:barClr, background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(1)}%</div>
+          </div>
+          <ProgBar pct={pct} color={barClr} big/>
+          {over && <p className="text-xs font-semibold flex items-center gap-1.5 mt-3" style={{color: 'var(--spend-color)'}}><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
+           <LI name="Crosshair" size={24} style={{color: 'var(--text-dim)'}}/>
+           <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Sin límite este mes.</p>
+        </div>
+      )}
+
+      {editing && (
+        <Modal title="Ajustar Presupuesto" onClose={()=>setEditing(false)}>
+          <div className="space-y-5">
+            <div>
+              <label className="f-label">Límite de gasto (€)</label>
+              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
+                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
+            </div>
+            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
+              Confirmar
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+//  WIDGET: SAVINGS GOALS (Auto-Ahorro con Balance Global)
+// ══════════════════════════════════════════════
+function GoalsWidget({ globalBalance }) {
   const [goals, setGoals]   = useState(()=>ls(KEYS.GOALS,[]));
   const [newModal, setNew]  = useState(false);
   const [addModal, setAdd]  = useState(null);
-  const [nf, setNf]         = useState({ name:'', target:'', saved:'' });
+  const [nf, setNf]         = useState({ name:'', target:'', saved:'', autoSweep: false });
   const [addAmt, setAddAmt] = useState('');
 
   const persist = (g) => { setGoals(g); lsSet(KEYS.GOALS,g); };
@@ -795,8 +844,8 @@ function GoalsWidget() {
   const createGoal = () => {
     const t=parseFloat(nf.target), s=parseFloat(nf.saved)||0;
     if (!nf.name.trim()||isNaN(t)||t<=0) return;
-    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s }]);
-    setNf({name:'',target:'',saved:''}); setNew(false);
+    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s, autoSweep: nf.autoSweep }]);
+    setNf({name:'',target:'',saved:'', autoSweep: false}); setNew(false);
   };
 
   const addToGoal = (id) => {
@@ -826,9 +875,12 @@ function GoalsWidget() {
           </div>
         : <div className="space-y-5 pt-1">
             {goals.map(g=>{
-              const pct=(g.saved/g.target)*100;
+              // AQUÍ ESTÁ LA MAGIA: Suma el sobrante global histórico de TODOS los meses
+              const effectiveSaved = g.autoSweep && globalBalance > 0 ? g.saved + globalBalance : g.saved;
+              const pct=(effectiveSaved/g.target)*100;
               const done=pct>=100;
               const clr=done?'var(--income-color)':pct>50?'var(--gold-color)':'var(--accent-color)';
+              
               return (
                 <div key={g.id} className="space-y-2.5">
                   <div className="flex items-start justify-between">
@@ -836,8 +888,11 @@ function GoalsWidget() {
                       <div className="font-semibold text-[14.5px] flex items-center gap-2" style={{color: 'var(--text-main)'}}>
                         {done && <span className="p-0.5 rounded-md" style={{color:'var(--income-color)', background: 'var(--income-bg)'}}><LI name="Check" size={12}/></span>}
                         {g.name}
+                        {g.autoSweep && <span className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold" style={{background:'var(--gold-bg)', color:'var(--gold-color)'}}>Auto</span>}
                       </div>
-                      <div className="font-mono text-xs mt-1" style={{color: 'var(--text-dim)'}}>{fmtEur(g.saved)} de {fmtEur(g.target)}</div>
+                      <div className="font-mono text-xs mt-1" style={{color: 'var(--text-dim)'}}>
+                        {fmtEur(effectiveSaved)} de {fmtEur(g.target)}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {!done && (
@@ -869,6 +924,19 @@ function GoalsWidget() {
               <input type="number" min="1" step="10" className="f-input font-mono" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
             <div><label className="f-label">Ya ahorrado (€)</label>
               <input type="number" min="0" step="10" className="f-input font-mono" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
+            
+            <div className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all" 
+                 style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-bg)' : 'var(--raised-bg)'}} 
+                 onClick={()=>setNf(p=>({...p, autoSweep: !p.autoSweep}))}>
+              <div className="w-5 h-5 rounded flex items-center justify-center border transition-colors" style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-color)' : 'transparent'}}>
+                {nf.autoSweep && <LI name="Check" size={14} className="text-black" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold" style={{color: 'var(--text-main)'}}>Ahorro Automático</p>
+                <p className="text-[10px]" style={{color: 'var(--text-dim)'}}>Suma todo el sobrante histórico a la meta</p>
+              </div>
+            </div>
+
             <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
               style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-color)', color: 'var(--gold-color)' }}>
               Empezar ahorro
@@ -929,6 +997,7 @@ function App() {
     setToast({msg,color}); setTimeout(()=>setToast(null),2600);
   };
 
+  // DATOS MES ACTUAL
   const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
 
   const monthTx = useMemo(()=>
@@ -941,11 +1010,38 @@ function App() {
   const balance     = totalIncome-totalSpend;
   const budgetPct   = totalIncome>0 ? (totalSpend/totalIncome)*100 : 0;
 
-  const tipoData = useMemo(()=>{
-    const exp=monthTx.filter(t=>t.type==='expense'), tot=exp.reduce((s,t)=>s+t.amount,0)||1;
-    return TIPOS.map(tipo=>({ tipo, sum:exp.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0), pct:0 }))
-                .map(d=>({...d,pct:(d.sum/tot)*100}));
-  },[monthTx]);
+  // DATOS MES ANTERIOR (COMPARATIVA)
+  const prevMonthNum = month === 0 ? 11 : month - 1;
+  const prevYearNum  = month === 0 ? year - 1 : year;
+  
+  const prevMonthTx  = useMemo(()=>
+    txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===prevMonthNum&&d.getFullYear()===prevYearNum;})
+  ,[txs,month,year]);
+
+  const prevTotalSpend  = useMemo(()=>prevMonthTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),[prevMonthTx]);
+  const prevTotalIncome = useMemo(()=>prevMonthTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),[prevMonthTx]);
+
+  const getDiff = (curr, prev, reverseColors = false) => {
+    if (!prev || prev === 0) return null; 
+    const diff = ((curr - prev) / prev) * 100;
+    if (Math.abs(diff) < 0.1) return null; 
+    
+    const isGood = reverseColors ? diff <= 0 : diff >= 0;
+    return { 
+      value: diff, 
+      formatted: `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`,
+      color: isGood ? 'var(--income-color)' : 'var(--spend-color)',
+      bg: isGood ? 'var(--income-bg)' : 'var(--spend-bg)'
+    };
+  };
+
+  const spendDiff = getDiff(totalSpend, prevTotalSpend, true); 
+  const incomeDiff = getDiff(totalIncome, prevTotalIncome, false); 
+
+  // DATOS GLOBALES PARA EL AUTO-AHORRO
+  const globalTotalSpend  = useMemo(()=>txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0),[txs]);
+  const globalTotalIncome = useMemo(()=>txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),[txs]);
+  const globalBalance     = globalTotalIncome - globalTotalSpend;
 
   const displayTx = useMemo(()=>filter==='all'?monthTx:monthTx.filter(t=>t.type===filter),[monthTx,filter]);
 
@@ -1021,7 +1117,6 @@ function App() {
             className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold transition-all shadow-md hover:-translate-y-0.5" style={{color: 'var(--text-dim)'}}>
             <LI name="Upload" size={15}/> Importar
           </button>
-          {/* BOTÓN DE CAMBIO DE TEMA */}
           <button onClick={toggleTheme} title="Cambiar Tema"
             className="flex items-center justify-center w-10 h-10 glass rounded-xl transition-all shadow-md hover:-translate-y-0.5" style={{color: 'var(--text-main)'}}>
             <LI name={theme === 'dark' ? 'Heart' : 'Moon'} size={18}/>
@@ -1032,28 +1127,14 @@ function App() {
       {/* ── SUMMARY CARDS ── */}
       <div className="grid grid-cols-4 gap-4 summary-4">
         <SummaryCard label="Gastos" value={fmtEur(totalSpend)} color="var(--spend-color)"
-          sub="este mes" icon={<LI name="TrendingDown" size={16}/>} delay="delay-1"/>
+          sub="este mes" icon={<LI name="TrendingDown" size={16}/>} delay="delay-1" diff={spendDiff}/>
         <SummaryCard label="Ingresos" value={fmtEur(totalIncome)} color="var(--income-color)"
-          sub="este mes" icon={<LI name="TrendingUp" size={16}/>} delay="delay-2"/>
+          sub="este mes" icon={<LI name="TrendingUp" size={16}/>} delay="delay-2" diff={incomeDiff}/>
         <SummaryCard label="Balance" value={fmtEur(balance)} color={balance>=0?'var(--income-color)':'var(--spend-color)'}
           sub={balance>=0?'en positivo':'en déficit'} icon={<LI name="Wallet" size={16}/>} delay="delay-3"/>
         <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)+'%'} color="var(--accent-color)"
           sub={totalIncome>0?`${fmtEur(totalSpend)} de ${fmtEur(totalIncome)}`:'sin ingresos'}
           icon={<LI name="Activity" size={16}/>} delay="delay-4"/>
-      </div>
-
-      {/* ── TIPO BREAKDOWN ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {tipoData.map(({tipo,sum,pct})=>(
-          <div key={tipo} className="glass rounded-2xl p-5 space-y-3.5 anim-fadeup">
-            <div className="flex justify-between items-center">
-              <span className="text-[11px] font-bold uppercase tracking-widest" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
-              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(0)}%</span>
-            </div>
-            <div className="font-mono font-bold text-lg" style={{color: 'var(--text-main)'}}>{fmtEur(sum)}</div>
-            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
-          </div>
-        ))}
       </div>
 
       {/* ── MAIN 2-COLUMN GRID ── */}
@@ -1096,11 +1177,12 @@ function App() {
 
         {/* RIGHT: Widgets */}
         <div className="space-y-6">
+          <MonthSummaryWidget balance={balance} />
           <SettlementWidget monthTx={monthTx} />
           <BalanceChartWidget totalIncome={totalIncome} totalSpend={totalSpend} />
-          <BudgetWidget monthKey={monthKey} totalSpend={totalSpend}/>
           <CategoryWidget monthTx={monthTx}/>
-          <GoalsWidget/>
+          <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
+          <GoalsWidget globalBalance={globalBalance} />
         </div>
       </div>
 
@@ -1124,7 +1206,6 @@ function App() {
   );
 }
 
-// Envolver en ErrorBoundary para evitar pantallas negras
 ReactDOM.createRoot(document.getElementById('root')).render(
   <ErrorBoundary>
     <App/>
