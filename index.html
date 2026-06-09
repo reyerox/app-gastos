@@ -9,12 +9,10 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.png" />
 
-  <!-- Google Fonts: Inter + Space Grotesk + Playfair Display -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -26,60 +24,104 @@
             sans:    ['Inter', 'sans-serif'],
           },
           colors: {
-            base:    '#09090d',
-            surface: '#111116',
-            card:    '#16161d',
-            raised:  '#1c1c25',
-            border:  '#26262f',
-            subtle:  '#32323e',
-            dim:     '#73738c',
-            muted:   '#8888a0',
-            soft:    '#b8b8cc',
-            bright:  '#f4f4f5',
-            income: { DEFAULT: '#34d399', dim: '#065f46', glow: '#34d39920' },
-            spend:  { DEFAULT: '#f87171', dim: '#7f1d1d', glow: '#f8717120' },
-            accent: { DEFAULT: '#818cf8', dim: '#312e81', glow: '#818cf820' },
-            gold:   { DEFAULT: '#fbbf24', glow: '#fbbf2420' },
+            base:    'var(--bg-main)',
+            surface: 'var(--raised-bg)',
+            card:    'var(--glass-bg)',
+            raised:  'var(--raised-bg)',
+            border:  'var(--border-color)',
+            subtle:  'var(--border-color)',
+            dim:     'var(--text-dim)',
+            muted:   'var(--text-dim)',
+            soft:    'var(--border-color)',
+            bright:  'var(--text-main)',
+            income: { DEFAULT: 'var(--income-color)', dim: 'var(--income-bg)', glow: 'var(--income-bg)' },
+            spend:  { DEFAULT: 'var(--spend-color)', dim: 'var(--spend-bg)', glow: 'var(--spend-bg)' },
+            accent: { DEFAULT: 'var(--accent-color)', dim: 'var(--accent-bg)', glow: 'var(--accent-bg)' },
+            gold:   { DEFAULT: 'var(--gold-color)', glow: 'var(--gold-bg)' },
           },
         }
       }
     }
   </script>
 
-  <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <style>
+    /* VARIABLES DE TEMA */
+    :root {
+      --bg-main: #09090d;
+      --text-main: #f4f4f5;
+      --text-dim: #73738c;
+      --border-color: #26262f;
+      --glass-bg: rgba(22, 22, 29, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.05);
+      --chip-border: rgba(255, 255, 255, 0.05);
+      --raised-bg: #1c1c25;
+      --accent-color: #818cf8;
+      --accent-bg: rgba(129, 140, 248, 0.15);
+      --income-color: #34d399;
+      --income-bg: rgba(52, 211, 153, 0.15);
+      --spend-color: #f87171;
+      --spend-bg: rgba(248, 113, 113, 0.15);
+      --gold-color: #fbbf24;
+      --gold-bg: rgba(251, 191, 36, 0.15);
+      --inv-color: #a855f7;
+      --inv-bg: rgba(168, 85, 247, 0.15);
+      --noise-opacity: 0.5;
+    }
+
+    [data-theme="love"] {
+      --bg-main: #fff0f5; 
+      --text-main: #4a0e4e; 
+      --text-dim: #a6607c; 
+      --border-color: #ffb3c6;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 179, 198, 0.4);
+      --chip-border: rgba(255, 179, 198, 0.8);
+      --raised-bg: #ffe5ec;
+      --accent-color: #e5383b; 
+      --accent-bg: rgba(229, 56, 59, 0.12);
+      --income-color: #2a9d8f; 
+      --income-bg: rgba(42, 157, 143, 0.12);
+      --spend-color: #c1121f; 
+      --spend-bg: rgba(193, 18, 31, 0.12);
+      --gold-color: #f582ae; 
+      --gold-bg: rgba(245, 130, 174, 0.15);
+      --inv-color: #9d4edd; 
+      --inv-bg: rgba(157, 78, 221, 0.12);
+      --noise-opacity: 0.15;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; }
     html { scroll-behavior: smooth; }
     body {
-      background: #09090d;
-      color: #f4f4f5;
+      background: var(--bg-main);
+      color: var(--text-main);
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      transition: background-color 0.4s ease, color 0.4s ease;
     }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #32323e; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 99px; }
 
-    /* Glass card - Refinada */
+    /* Glass card */
     .glass {
-      background: rgba(22, 22, 29, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      transition: all 0.4s ease;
     }
 
     /* Progress bar */
-    .prog-track { height: 6px; background: #1c1c25; border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+    .prog-track { height: 6px; background: var(--raised-bg); border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
     .prog-fill   { height: 100%; border-radius: 99px; transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
-
-    /* Big progress */
-    .prog-big    { height: 10px; background: #1c1c25; border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5); }
+    .prog-big    { height: 10px; background: var(--raised-bg); border-radius: 99px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05); }
     .prog-big .prog-fill { height: 100%; }
 
     /* Animations */
@@ -91,7 +133,6 @@
     .anim-slidein { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
     .anim-popin   { animation: popIn   0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-    /* Stagger delays */
     .delay-1 { animation-delay:0.05s; }
     .delay-2 { animation-delay:0.10s; }
     .delay-3 { animation-delay:0.15s; }
@@ -99,46 +140,53 @@
 
     /* Transaction row hover */
     .tx-row { transition: all 0.2s ease; border-radius: 12px; border: 1px solid transparent; }
-    .tx-row:hover { background: rgba(38, 38, 47, 0.4); border: 1px solid rgba(255, 255, 255, 0.03); }
+    .tx-row:hover { background: var(--raised-bg); border: 1px solid var(--border-color); }
     .tx-row:hover .del-btn { opacity: 1; }
     .del-btn { opacity: 0; transition: opacity 0.2s ease; }
 
-    /* Glow button */
-    .btn-income { background: rgba(6, 95, 70, 0.3); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; transition: all 0.2s; }
-    .btn-income:hover { background: rgba(6, 95, 70, 0.5); box-shadow: 0 4px 20px rgba(52, 211, 153, 0.15); transform: translateY(-1px); border-color: rgba(52, 211, 153, 0.5); }
-    .btn-spend  { background: rgba(127, 29, 29, 0.3); border: 1px solid rgba(248, 113, 113, 0.3); color: #f87171; transition: all 0.2s; }
-    .btn-spend:hover  { background: rgba(127, 29, 29, 0.5); box-shadow: 0 4px 20px rgba(248, 113, 113, 0.15); transform: translateY(-1px); border-color: rgba(248, 113, 113, 0.5); }
-
     /* Tag chip */
-    .chip { display:inline-flex; align-items:center; padding: 2px 10px; border-radius: 99px; font-family:'Space Grotesk',monospace; font-size:10.5px; font-weight:600; letter-spacing:0.02em; }
+    .chip { 
+      display: inline-flex; 
+      align-items: center; 
+      gap: 4px; /* Espacio sutil entre emoji y texto */
+      padding: 3px 10px; /* Relleno optimizado */
+      border-radius: 99px; 
+      font-family: 'Space Grotesk', monospace; 
+      font-size: 10.5px; 
+      font-weight: 600; 
+      letter-spacing: 0.02em; 
+      line-height: 1.2; /* Evita que el emoji ensanche la pastilla */
+      white-space: nowrap; 
+      user-select: none; 
+    }
 
     /* Modal overlay */
-    .modal-bg { animation: popIn 0.25s ease; background: rgba(0,0,0,0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-    .modal-panel { background: #111116; border: 1px solid #26262f; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    .modal-bg { animation: popIn 0.25s ease; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    .modal-panel { background: var(--bg-main); border: 1px solid var(--border-color); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); }
 
     /* Form input */
     .f-input {
-      width:100%; background:#1c1c25; border:1px solid #26262f; border-radius:12px;
-      padding:12px 16px; font-size:14px; font-family:inherit; color:#f4f4f5;
-      outline:none; transition:all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+      width:100%; background:var(--raised-bg); border:1px solid var(--border-color); border-radius:12px;
+      padding:12px 16px; font-size:14px; font-family:inherit; color:var(--text-main);
+      outline:none; transition:all 0.2s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
     }
-    .f-input:focus { border-color: #818cf8; box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.1), inset 0 2px 4px rgba(0,0,0,0.2); }
-    .f-label { font-size:11px; color:#8888a0; text-transform:uppercase; letter-spacing:0.06em; font-weight:600; margin-bottom:8px; display:block; }
+    .f-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 2px var(--accent-bg), inset 0 2px 4px rgba(0,0,0,0.05); }
+    .f-label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; font-weight:600; margin-bottom:8px; display:block; }
 
     /* Segment control */
-    .seg-wrap { display:flex; background:#1c1c25; border:1px solid #26262f; border-radius:12px; padding:4px; gap:2px; }
-    .seg-btn { flex:1; padding:8px; border-radius:8px; font-size:12.5px; font-weight:600; text-align:center; cursor:pointer; transition:all 0.2s; color:#73738c; }
-    .seg-btn.active { background:#26262f; color:#f4f4f5; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .seg-wrap { display:flex; background:var(--raised-bg); border:1px solid var(--border-color); border-radius:12px; padding:4px; gap:2px; }
+    .seg-btn { flex:1; padding:8px; border-radius:8px; font-size:12.5px; font-weight:600; text-align:center; cursor:pointer; transition:all 0.2s; color:var(--text-dim); }
+    .seg-btn.active { background:var(--bg-main); color:var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 1px solid var(--border-color); }
 
     /* Toast */
-    .toast { animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .toast { animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: var(--glass-bg); border: 1px solid var(--border-color); }
 
     /* Noise texture overlay */
     body::before {
       content:'';
       position:fixed; inset:0; pointer-events:none; z-index:0;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      opacity: 0.5;
+      opacity: var(--noise-opacity);
     }
 
     #root { position: relative; z-index: 1; }
@@ -153,7 +201,6 @@
     }
   </style>
 
-  <!-- React + ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -169,10 +216,10 @@ const { useState, useEffect, useMemo, useRef, useCallback } = React;
 // ══════════════════════════════════════════════
 const MONTHS    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const TIPOS     = ['Obligatorios','Opcionales','Ocio','Inversiones','Otros'];
-const TIPO_CLR  = { Obligatorios:'#818cf8', Opcionales:'#fbbf24', Ocio:'#34d399', Inversiones:'#a855f7', Otros:'#94a3b8' };
-const TIPO_BG   = { Obligatorios:'#818cf815', Opcionales:'#fbbf2415', Ocio:'#34d39915', Inversiones:'#a855f715', Otros:'#94a3b815' };
 
-// NOMBRES ACTUALIZADOS AQUÍ
+const TIPO_CLR  = { Obligatorios:'var(--accent-color)', Opcionales:'var(--gold-color)', Ocio:'var(--income-color)', Inversiones:'var(--inv-color)', Otros:'var(--text-dim)' };
+const TIPO_BG   = { Obligatorios:'var(--accent-bg)', Opcionales:'var(--gold-bg)', Ocio:'var(--income-bg)', Inversiones:'var(--inv-bg)', Otros:'var(--border-color)' };
+
 const USERS     = ['Dani 🦭', 'Nati 🌻'];
 
 const KEYS = {
@@ -183,14 +230,13 @@ const KEYS = {
 
 const genId   = () => `${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
 
-// BLINDAJE: Evitar que el navegador bloquee la app si el LocalStorage está protegido (ej: Brave en modo Archivo Local)
 const ls = (k, fb=[]) => { 
   try { return JSON.parse(localStorage.getItem(k) ?? 'null') ?? fb; } 
-  catch(e) { console.warn('LocalStorage lectura bloqueada:', e); return fb; } 
+  catch(e) { console.warn('LocalStorage bloqueado:', e); return fb; } 
 };
 const lsSet = (k,v) => { 
   try { localStorage.setItem(k, JSON.stringify(v)); } 
-  catch(e) { console.warn('LocalStorage escritura bloqueada por seguridad del navegador:', e); } 
+  catch(e) { console.warn('LocalStorage bloqueado:', e); } 
 };
 
 const fmtEur  = (n) => {
@@ -200,7 +246,7 @@ const fmtEur  = (n) => {
 const clamp   = (n,lo,hi) => Math.max(lo, Math.min(hi, n));
 
 // ══════════════════════════════════════════════
-//  ERROR BOUNDARY (Pantalla anti-negro)
+//  ERROR BOUNDARY
 // ══════════════════════════════════════════════
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -211,7 +257,7 @@ class ErrorBoundary extends React.Component {
     return { hasError: true, errorInfo: error.toString() };
   }
   componentDidCatch(error, errorInfo) {
-    console.error("Error crítico capturado:", error, errorInfo);
+    console.error("Error crítico:", error, errorInfo);
   }
   render() {
     if (this.state.hasError) {
@@ -293,10 +339,10 @@ function LI({ name, size=16, className='' }) {
 
 function Toast({ msg, color }) {
   return (
-    <div className="toast fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-surface border border-border shadow-2xl text-sm font-semibold"
-         style={{ borderLeft:`4px solid ${color}`, color: '#f4f4f5' }}>
+    <div className="toast fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-semibold"
+         style={{ borderLeft:`4px solid ${color}`}}>
       <div className="w-2 h-2 rounded-full" style={{backgroundColor: color}}></div>
-      {msg}
+      <span style={{color: 'var(--text-main)'}}>{msg}</span>
     </div>
   );
 }
@@ -305,9 +351,9 @@ function Modal({ title, onClose, children, wide=false }) {
   return ReactDOM.createPortal(
     <div className="modal-bg fixed inset-0 z-[9999] flex items-center justify-center p-4">
       <div className={`modal-panel rounded-2xl w-full ${wide?'max-w-lg':'max-w-md'} max-h-[92vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between px-7 py-5 border-b border-border bg-[#16161d]">
-          <h2 className="font-serif text-xl italic">{title}</h2>
-          <button onClick={onClose} className="text-dim hover:text-bright transition-colors p-2 rounded-xl hover:bg-raised">
+        <div className="flex items-center justify-between px-7 py-5 border-b" style={{borderColor: 'var(--border-color)', background:'var(--glass-bg)'}}>
+          <h2 className="font-serif text-xl italic" style={{color: 'var(--text-main)'}}>{title}</h2>
+          <button onClick={onClose} className="text-dim hover:text-bright transition-colors p-2 rounded-xl" style={{color:'var(--text-dim)'}}>
             <LI name="X" size={18}/>
           </button>
         </div>
@@ -331,11 +377,11 @@ function SummaryCard({ label, value, color, sub, icon, delay='' }) {
   return (
     <div className={`glass rounded-2xl p-5 flex flex-col gap-2 anim-fadeup ${delay}`}>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim">{label}</span>
-        {icon && <span className="text-dim opacity-70">{icon}</span>}
+        <span className="text-[10px] font-bold uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>{label}</span>
+        {icon && <span style={{color: 'var(--text-dim)', opacity: 0.7}}>{icon}</span>}
       </div>
       <span className="font-mono text-[22px] font-bold" style={{color, textShadow: `0 2px 10px ${color}20`}}>{value}</span>
-      {sub && <span className="text-xs text-dim font-medium">{sub}</span>}
+      {sub && <span className="text-xs font-medium" style={{color: 'var(--text-dim)'}}>{sub}</span>}
     </div>
   );
 }
@@ -344,7 +390,6 @@ function SummaryCard({ label, value, color, sub, icon, delay='' }) {
 //  WIDGET: SETTLEMENT (CUENTAS CLARAS)
 // ══════════════════════════════════════════════
 function SettlementWidget({ monthTx }) {
-  // Convertimos automáticamente a "Común" los gastos antiguos que no tenían etiqueta
   const sharedExp = monthTx.filter(t => t.type === 'expense' && (t.scope === 'Común' || !t.scope));
   
   const user1 = USERS[0];
@@ -360,47 +405,47 @@ function SettlementWidget({ monthTx }) {
   const diff2 = paidUser2 - half;
 
   let statusMsg = "Estáis en paz";
-  let statusColor = "#73738c"; 
+  let statusColor = "var(--text-dim)"; 
   let subMsg = "Ambos habéis aportado lo mismo.";
-  let glowColor = "rgba(115, 115, 140, 0.2)";
+  let glowColor = "var(--border-color)";
 
   if (diff1 > 0) {
     statusMsg = `${user2} te debe`;
     subMsg = fmtEur(diff1);
-    statusColor = "#34d399";
-    glowColor = "rgba(52, 211, 153, 0.2)";
+    statusColor = "var(--income-color)";
+    glowColor = "var(--income-bg)";
   } else if (diff2 > 0) {
     statusMsg = `Debes a ${user2}`;
     subMsg = fmtEur(diff2);
-    statusColor = "#f87171";
-    glowColor = "rgba(248, 113, 113, 0.2)";
+    statusColor = "var(--spend-color)";
+    glowColor = "var(--spend-bg)";
   } else if (totalShared > 0) {
     statusMsg = "Cuentas saldadas 🤝";
     subMsg = "0,00 € pendientes";
-    statusColor = "#818cf8";
-    glowColor = "rgba(129, 140, 248, 0.2)";
+    statusColor = "var(--accent-color)";
+    glowColor = "var(--accent-bg)";
   }
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-40 pointer-events-none rounded-full" style={{ background: glowColor, transform: 'translate(30%, -30%)' }}></div>
-      <div className="border-b border-border/50 pb-3 relative z-10">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+      <div className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-60 pointer-events-none rounded-full" style={{ background: glowColor, transform: 'translate(30%, -30%)' }}></div>
+      <div className="border-b pb-3 relative z-10" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
           <LI name="Scale" size={14}/> Cuentas Claras
         </span>
       </div>
-      <div className="flex justify-between items-center bg-[#1c1c25] p-4 rounded-xl border border-white/5 relative z-10">
-        <div className="text-center w-1/2 border-r border-white/5">
-          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user1}</p>
-          <p className="font-mono font-bold text-[#818cf8]">{fmtEur(paidUser1)}</p>
+      <div className="flex justify-between items-center p-4 rounded-xl border relative z-10" style={{background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>
+        <div className="text-center w-1/2 border-r" style={{borderColor: 'var(--border-color)'}}>
+          <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{color: 'var(--text-dim)'}}>{user1}</p>
+          <p className="font-mono font-bold" style={{color: 'var(--accent-color)'}}>{fmtEur(paidUser1)}</p>
         </div>
         <div className="text-center w-1/2">
-          <p className="text-[10px] text-dim uppercase tracking-widest mb-1.5">{user2}</p>
-          <p className="font-mono font-bold text-[#fbbf24]">{fmtEur(paidUser2)}</p>
+          <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{color: 'var(--text-dim)'}}>{user2}</p>
+          <p className="font-mono font-bold" style={{color: 'var(--gold-color)'}}>{fmtEur(paidUser2)}</p>
         </div>
       </div>
       <div className="text-center pt-2 relative z-10">
-        <p className="text-[11px] font-bold text-dim uppercase tracking-widest mb-1.5">{statusMsg}</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest mb-1.5" style={{color: 'var(--text-dim)'}}>{statusMsg}</p>
         <p className="font-mono text-[26px] font-bold tracking-tight" style={{color: statusColor, textShadow: `0 2px 16px ${glowColor}`}}>
           {totalShared === 0 ? 'Sin gastos comunes' : subMsg}
         </p>
@@ -419,27 +464,27 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="border-b border-border/50 pb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+      <div className="border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
           <LI name="BarChart2" size={14}/> Balance Gráfico
         </span>
       </div>
       <div className="flex items-end justify-around h-[140px] pt-4 pb-2">
         <div className="flex flex-col items-center gap-3 w-1/3">
-          <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
+          <div className="w-full rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px', background: 'var(--raised-bg)' }}>
             <div className="w-full rounded-t-xl transition-all duration-1000 ease-out" 
-                 style={{ height: `${incPct}%`, background: '#34d399', boxShadow: '0 -4px 16px rgba(52, 211, 153, 0.25)' }}>
+                 style={{ height: `${incPct}%`, background: 'var(--income-color)', boxShadow: '0 -4px 16px var(--income-bg)' }}>
             </div>
           </div>
-          <span className="text-xs font-semibold text-dim uppercase tracking-widest">Ingresos</span>
+          <span className="text-xs font-semibold uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>Ingresos</span>
         </div>
         <div className="flex flex-col items-center gap-3 w-1/3">
-          <div className="w-full bg-[#1c1c25] rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px' }}>
+          <div className="w-full rounded-t-xl relative flex items-end justify-center shadow-inner" style={{ height: '100px', background: 'var(--raised-bg)' }}>
             <div className="w-full rounded-t-xl transition-all duration-1000 ease-out delay-100" 
-                 style={{ height: `${expPct}%`, background: '#f87171', boxShadow: '0 -4px 16px rgba(248, 113, 113, 0.25)' }}>
+                 style={{ height: `${expPct}%`, background: 'var(--spend-color)', boxShadow: '0 -4px 16px var(--spend-bg)' }}>
             </div>
           </div>
-          <span className="text-xs font-semibold text-dim uppercase tracking-widest">Gastos</span>
+          <span className="text-xs font-semibold uppercase tracking-widest" style={{color: 'var(--text-dim)'}}>Gastos</span>
         </div>
       </div>
     </div>
@@ -449,7 +494,7 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
 // ══════════════════════════════════════════════
 //  ADD / EDIT TRANSACTION MODAL
 // ══════════════════════════════════════════════
-function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
+function AddTxModal({ type, initialData, onSave, onClose, month, year, theme }) {
   const today = new Date();
   const defDate = new Date(year, month, year===today.getFullYear()&&month===today.getMonth() ? today.getDate() : 1)
     .toISOString().slice(0,10);
@@ -458,12 +503,11 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
     if (initialData) {
       return {
         ...initialData,
-        scope: initialData.scope || 'Común', // Si editamos, recuerda si era común
+        scope: initialData.scope || 'Común', 
         customTipo: initialData.customTipo || '',
         paidBy: initialData.paidBy || USERS[0]
       };
     }
-    // Valores por defecto al crear uno nuevo
     return { concept:'', amount:'', tipo:TIPOS[0], customTipo:'', paidBy:USERS[0], date:defDate, scope:'Personal' };
   });
   
@@ -492,7 +536,7 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
       <div className="space-y-5">
         <div>
           <label className="f-label">Fecha</label>
-          <input type="date" className="f-input" value={f.date} onChange={e=>set('date',e.target.value)} style={{colorScheme:'dark'}}/>
+          <input type="date" className="f-input" value={f.date} onChange={e=>set('date',e.target.value)} style={{colorScheme: theme === 'dark' ? 'dark' : 'light'}}/>
         </div>
         <div>
           <label className="f-label">Concepto</label>
@@ -506,7 +550,7 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
           </div>
           <div>
             <label className="f-label">Tipo</label>
-            <select className="f-input" value={f.tipo} onChange={e=>set('tipo',e.target.value)} style={{colorScheme:'dark'}}>
+            <select className="f-input" value={f.tipo} onChange={e=>set('tipo',e.target.value)} style={{colorScheme: theme === 'dark' ? 'dark' : 'light'}}>
               {TIPOS.map(t=><option key={t}>{t}</option>)}
             </select>
           </div>
@@ -528,7 +572,6 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
           </div>
         </div>
 
-        {/* Solo mostramos la selección de usuario si el gasto es Común */}
         {f.scope === 'Común' && (
           <div className="anim-fadeup">
             <label className="f-label">¿Quién {isIncome ? 'lo ingresa' : 'paga'}?</label>
@@ -536,7 +579,11 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
               {USERS.map(u=>(
                 <button key={u} onClick={()=>set('paidBy',u)}
                   className="py-3 rounded-xl text-sm font-semibold transition-all shadow-sm"
-                  style={{ background: f.paidBy===u?'#818cf820':'#1c1c25', border:`1px solid ${f.paidBy===u?'#818cf8':'#26262f'}`, color: f.paidBy===u?'#a5b4fc':'#8888a0' }}>
+                  style={{ 
+                    background: f.paidBy===u?'var(--accent-bg)':'var(--raised-bg)', 
+                    border:`1px solid ${f.paidBy===u?'var(--accent-color)':'var(--border-color)'}`, 
+                    color: f.paidBy===u?'var(--accent-color)':'var(--text-dim)' 
+                  }}>
                   {u}
                 </button>
               ))}
@@ -546,7 +593,11 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
 
         <button onClick={save}
           className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all mt-2 shadow-lg"
-          style={{ background: isEdit?'#3b82f640':(isIncome?'#065f4640':'#7f1d1d40'), border:`1px solid ${isEdit?'#3b82f660':(isIncome?'#34d39960':'#f8717160')}`, color: isEdit?'#60a5fa':(isIncome?'#34d399':'#f87171') }}>
+          style={{ 
+            background: isEdit?'var(--accent-bg)':(isIncome?'var(--income-bg)':'var(--spend-bg)'), 
+            border:`1px solid ${isEdit?'var(--accent-color)':(isIncome?'var(--income-color)':'var(--spend-color)')}`, 
+            color: isEdit?'var(--accent-color)':(isIncome?'var(--income-color)':'var(--spend-color)') 
+          }}>
           {isEdit ? 'Actualizar registro' : `Guardar ${isIncome?'ingreso':'gasto'}`}
         </button>
       </div>
@@ -559,19 +610,20 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year }) {
 // ══════════════════════════════════════════════
 function TxRow({ tx, onEdit, onDelete }) {
   const isIn = tx.type==='income';
-  const clr  = isIn ? '#34d399' : '#f87171';
-  const bg   = isIn ? '#34d39915' : '#f8717115';
+  const clr  = isIn ? 'var(--income-color)' : 'var(--spend-color)';
+  const bg   = isIn ? 'var(--income-bg)' : 'var(--spend-bg)';
   
-  // Etiqueta visual de categoría (ej: "Mascotas" si era "Otros")
   const displayTag = (tx.tipo === 'Otros' && tx.customTipo) ? tx.customTipo : tx.tipo;
-  const tagColor = TIPO_CLR[tx.tipo] || '#888';
-  const tagBg = TIPO_BG[tx.tipo] || '#26262f';
+  const tagColor = TIPO_CLR[tx.tipo] || 'var(--text-dim)';
+  const tagBg = TIPO_BG[tx.tipo] || 'var(--border-color)';
 
   const actualScope = tx.scope || 'Común'; 
   const isPersonal = actualScope === 'Personal';
+  
+  // AQUÍ VUELVEN A ESTAR LOS EMOJIS EN LA LISTA
   const scopeLabel = isPersonal ? '👤 Personal' : '🏠 Común';
-  const scopeColor = isPersonal ? '#818cf8' : '#34d399';
-  const scopeBg    = isPersonal ? '#818cf820' : '#34d39920';
+  const scopeColor = isPersonal ? 'var(--accent-color)' : 'var(--income-color)';
+  const scopeBg    = isPersonal ? 'var(--accent-bg)' : 'var(--income-bg)';
 
   let dateStr = '';
   try {
@@ -582,37 +634,34 @@ function TxRow({ tx, onEdit, onDelete }) {
   
   return (
     <div className="tx-row flex items-center gap-3.5 px-3.5 py-3 anim-slidein">
-      <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border border-white/5" style={{background:bg}}>
+      <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center border" style={{background:bg, borderColor: 'var(--border-color)'}}>
         <LI name={isIn?'ArrowUpRight':'ArrowDownRight'} size={18} style={{color:clr}} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap mb-1">
-          <span className="text-[14.5px] font-semibold text-bright truncate tracking-tight">{tx.concept}</span>
-          <span className="chip border border-white/5" style={{background:tagBg, color:tagColor}}>
+          <span className="text-[14.5px] font-semibold truncate tracking-tight" style={{color: 'var(--text-main)'}}>{tx.concept}</span>
+          <span className="chip border" style={{background:tagBg, color:tagColor, borderColor: 'var(--chip-border)'}}>
             {displayTag}
           </span>
-          
-          <span className="chip border border-white/5" style={{background:scopeBg, color:scopeColor}}>
+          <span className="chip border" style={{background:scopeBg, color:scopeColor, borderColor: 'var(--chip-border)'}}>
             {scopeLabel}
           </span>
-
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[11.5px] text-dim font-medium">{dateStr}</span>
-          <span className="text-dim text-[10px]">·</span>
-          <span className="text-[11.5px] font-medium" style={{color:'#818cf8'}}>{tx.paidBy}</span>
+          <span className="text-[11.5px] font-medium" style={{color: 'var(--text-dim)'}}>{dateStr}</span>
+          <span className="text-[10px]" style={{color: 'var(--text-dim)'}}>·</span>
+          <span className="text-[11.5px] font-medium" style={{color:'var(--accent-color)'}}>{tx.paidBy}</span>
         </div>
       </div>
       
-      {/* Botones de Acción */}
       <div className="flex items-center gap-1 flex-shrink-0">
         <span className="font-mono text-[15px] font-bold mr-2" style={{color:clr}}>
           {isIn?'+':'-'}{fmtEur(tx.amount)}
         </span>
-        <button className="del-btn text-dim hover:text-blue-400 p-1.5 rounded-xl hover:bg-blue-400/10 transition-colors" onClick={()=>onEdit(tx)} title="Editar">
+        <button className="del-btn p-1.5 rounded-xl transition-colors" style={{color: 'var(--text-dim)'}} onClick={()=>onEdit(tx)} title="Editar">
           <LI name="Pencil" size={15}/>
         </button>
-        <button className="del-btn text-dim hover:text-spend p-1.5 rounded-xl hover:bg-spend/10 transition-colors" onClick={()=>onDelete(tx.id)} title="Borrar">
+        <button className="del-btn p-1.5 rounded-xl transition-colors" style={{color: 'var(--text-dim)'}} onClick={()=>onDelete(tx.id)} title="Borrar">
           <LI name="Trash2" size={15}/>
         </button>
       </div>
@@ -623,15 +672,15 @@ function TxRow({ tx, onEdit, onDelete }) {
 // ══════════════════════════════════════════════
 //  WIDGET: MONTHLY BUDGET
 // ══════════════════════════════════════════════
-function BudgetWidget({ monthKey, totalSpent }) {
+function BudgetWidget({ monthKey, totalSpend }) {
   const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
   const [editing, setEditing] = useState(false);
   const [draft, setDraft]     = useState('');
 
   const budget = budgets[monthKey] || 0;
-  const pct    = budget > 0 ? (totalSpent/budget)*100 : 0;
+  const pct    = budget > 0 ? (totalSpend/budget)*100 : 0;
   const over   = pct > 100;
-  const barClr = over ? '#f87171' : pct>80 ? '#fbbf24' : '#34d399';
+  const barClr = over ? 'var(--spend-color)' : pct>80 ? 'var(--gold-color)' : 'var(--income-color)';
 
   const save = () => {
     const v = parseFloat(draft);
@@ -644,12 +693,13 @@ function BudgetWidget({ monthKey, totalSpent }) {
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
           <LI name="Target" size={14}/> Presupuesto
         </span>
         <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
-          className="text-xs font-semibold text-accent hover:text-indigo-300 transition-colors flex items-center gap-1.5 bg-accent/10 px-2.5 py-1 rounded-lg">
+          className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{color: 'var(--accent-color)', background: 'var(--accent-bg)'}}>
           <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
         </button>
       </div>
@@ -658,18 +708,18 @@ function BudgetWidget({ monthKey, totalSpent }) {
         <div className="pt-1">
           <div className="flex justify-between items-end mb-3">
             <div>
-              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpent)}</div>
-              <div className="text-xs text-dim mt-1 font-medium">de {fmtEur(budget)} marcados</div>
+              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpend)}</div>
+              <div className="text-xs mt-1 font-medium" style={{color: 'var(--text-dim)'}}>de {fmtEur(budget)} marcados</div>
             </div>
-            <div className="font-mono text-sm font-bold bg-[#1c1c25] px-2 py-1 rounded-md border border-white/5" style={{color:barClr}}>{pct.toFixed(1)}%</div>
+            <div className="font-mono text-sm font-bold px-2 py-1 rounded-md border" style={{color:barClr, background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(1)}%</div>
           </div>
           <ProgBar pct={pct} color={barClr} big/>
-          {over && <p className="text-xs font-semibold text-spend flex items-center gap-1.5 mt-3"><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
+          {over && <p className="text-xs font-semibold flex items-center gap-1.5 mt-3" style={{color: 'var(--spend-color)'}}><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
-           <LI name="Crosshair" size={24} className="text-dim"/>
-           <p className="text-sm text-dim text-center">Sin límite este mes.</p>
+           <LI name="Crosshair" size={24} style={{color: 'var(--text-dim)'}}/>
+           <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Sin límite este mes.</p>
         </div>
       )}
 
@@ -681,7 +731,8 @@ function BudgetWidget({ monthKey, totalSpent }) {
               <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
                 value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
             </div>
-            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg">
+            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
               Confirmar
             </button>
           </div>
@@ -705,8 +756,8 @@ function CategoryWidget({ monthTx }) {
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="border-b border-border/50 pb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+      <div className="border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
           <LI name="PieChart" size={14}/> Categorías
         </span>
       </div>
@@ -717,8 +768,8 @@ function CategoryWidget({ monthTx }) {
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
               <div className="flex gap-2.5 items-center">
-                <span className="font-mono text-xs text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
-                <span className="font-mono text-[13px] font-bold text-bright">{fmtEur(sum)}</span>
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(0)}%</span>
+                <span className="font-mono text-[13px] font-bold" style={{color: 'var(--text-main)'}}>{fmtEur(sum)}</span>
               </div>
             </div>
             <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
@@ -758,44 +809,45 @@ function GoalsWidget() {
 
   return (
     <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between border-b border-border/50 pb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-dim flex items-center gap-2">
+      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
           <LI name="Star" size={14}/> Metas
         </span>
-        <button onClick={()=>setNew(true)} className="text-xs font-semibold text-gold hover:text-yellow-200 transition-colors flex items-center gap-1.5 bg-gold/10 px-2.5 py-1 rounded-lg">
+        <button onClick={()=>setNew(true)} className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{color: 'var(--gold-color)', background: 'var(--gold-bg)'}}>
           <LI name="Plus" size={12}/> Nueva
         </button>
       </div>
 
       {goals.length===0
         ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
-            <LI name="PiggyBank" size={24} className="text-dim"/>
-            <p className="text-sm text-dim text-center">Crea tu primera meta.</p>
+            <LI name="PiggyBank" size={24} style={{color: 'var(--text-dim)'}}/>
+            <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Crea tu primera meta.</p>
           </div>
         : <div className="space-y-5 pt-1">
             {goals.map(g=>{
               const pct=(g.saved/g.target)*100;
               const done=pct>=100;
-              const clr=done?'#34d399':pct>50?'#fbbf24':'#818cf8';
+              const clr=done?'var(--income-color)':pct>50?'var(--gold-color)':'var(--accent-color)';
               return (
                 <div key={g.id} className="space-y-2.5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-semibold text-[14.5px] text-bright flex items-center gap-2">
-                        {done && <span className="bg-[#34d39920] p-0.5 rounded-md" style={{color:'#34d399'}}><LI name="Check" size={12}/></span>}
+                      <div className="font-semibold text-[14.5px] flex items-center gap-2" style={{color: 'var(--text-main)'}}>
+                        {done && <span className="p-0.5 rounded-md" style={{color:'var(--income-color)', background: 'var(--income-bg)'}}><LI name="Check" size={12}/></span>}
                         {g.name}
                       </div>
-                      <div className="font-mono text-xs text-dim mt-1">{fmtEur(g.saved)} de {fmtEur(g.target)}</div>
+                      <div className="font-mono text-xs mt-1" style={{color: 'var(--text-dim)'}}>{fmtEur(g.saved)} de {fmtEur(g.target)}</div>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {!done && (
                         <button onClick={()=>{setAdd(g.id);setAddAmt('');}}
                           className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all"
-                          style={{background:'#818cf820',color:'#818cf8',border:'1px solid #818cf840'}}>
+                          style={{background:'var(--accent-bg)',color:'var(--accent-color)',border:'1px solid var(--border-color)'}}>
                           <LI name="TrendingUp" size={13}/>
                         </button>
                       )}
-                      <button onClick={()=>deleteGoal(g.id)} className="text-dim hover:text-spend p-1.5 rounded-lg hover:bg-spend/10 transition-colors">
+                      <button onClick={()=>deleteGoal(g.id)} className="p-1.5 rounded-lg transition-colors" style={{color: 'var(--text-dim)'}}>
                         <LI name="Trash2" size={14}/>
                       </button>
                     </div>
@@ -817,7 +869,8 @@ function GoalsWidget() {
               <input type="number" min="1" step="10" className="f-input font-mono" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
             <div><label className="f-label">Ya ahorrado (€)</label>
               <input type="number" min="0" step="10" className="f-input font-mono" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
-            <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-gold/20 border border-gold/40 text-gold hover:bg-gold/30 transition-all shadow-lg">
+            <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-color)', color: 'var(--gold-color)' }}>
               Empezar ahorro
             </button>
           </div>
@@ -828,10 +881,11 @@ function GoalsWidget() {
       {addModal && (
         <Modal title="Ingresar ahorro" onClose={()=>setAdd(null)}>
           <div className="space-y-5">
-            <p className="text-[15px] text-dim">Sumar dinero a la meta <span className="text-bright font-bold italic">"{goals.find(g=>g.id===addModal)?.name}"</span></p>
+            <p className="text-[15px]" style={{color: 'var(--text-dim)'}}>Sumar dinero a la meta <span className="font-bold italic" style={{color: 'var(--text-main)'}}>"{goals.find(g=>g.id===addModal)?.name}"</span></p>
             <div><label className="f-label">Cantidad a ingresar (€)</label>
               <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="100.00" value={addAmt} onChange={e=>setAddAmt(e.target.value)} autoFocus/></div>
-            <button onClick={()=>addToGoal(addModal)} className="w-full py-3.5 rounded-xl text-[15px] font-bold bg-accent/20 border border-accent/40 text-accent hover:bg-accent/30 transition-all shadow-lg">
+            <button onClick={()=>addToGoal(addModal)} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
               Confirmar ingreso
             </button>
           </div>
@@ -856,9 +910,22 @@ function App() {
   const [toast, setToast]   = useState(null);
   const fileRef             = useRef();
 
+  // Estado del Tema
+  const [theme, setTheme] = useState(() => ls('zg_theme', 'dark'));
+
+  // Aplicar Tema al HTML body cada vez que cambie
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+    lsSet('zg_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(p => p === 'dark' ? 'love' : 'dark');
+  };
+
   useEffect(()=>lsSet(KEYS.TX,txs),[txs]);
 
-  const showToast = (msg, color='#34d399') => {
+  const showToast = (msg, color='var(--income-color)') => {
     setToast({msg,color}); setTimeout(()=>setToast(null),2600);
   };
 
@@ -888,24 +955,27 @@ function App() {
   const saveTx = (tx, isEdit) => { 
     if (isEdit) {
       setTxs(p => p.map(t => t.id === tx.id ? tx : t));
-      showToast('Registro actualizado', '#60a5fa');
+      showToast('Registro actualizado', 'var(--accent-color)');
     } else {
       setTxs(p => [tx, ...p]); 
-      showToast('Movimiento registrado', tx.type==='income'?'#34d399':'#f87171'); 
+      showToast('Movimiento registrado', tx.type==='income'?'var(--income-color)':'var(--spend-color)'); 
     }
   };
   
-  const delTx  = (id) => { setTxs(p=>p.filter(t=>t.id!==id)); showToast('Eliminado','#f87171'); };
+  const delTx  = (id) => { setTxs(p=>p.filter(t=>t.id!==id)); showToast('Eliminado','var(--spend-color)'); };
 
-  const doExport = ()=>{ exportCSV(txs,month,year); showToast(`Exportado: ${MONTHS[month]} ${year}`); };
+  const doExport = ()=>{ exportCSV(txs,month,year); showToast(`Exportado: ${MONTHS[month]} ${year}`, 'var(--accent-color)'); };
   const doImport = (e)=>{
     const f=e.target.files[0]; if(!f)return;
     const r=new FileReader();
     r.onload=ev=>{
       const parsed=parseCSV(ev.target.result);
-      if(!parsed.length){showToast('CSV vacío o inválido','#f87171');return;}
-      setTxs(prev=>{ const ids=new Set(prev.map(t=>t.id)); return [...prev,...parsed.filter(t=>!ids.has(t.id))]; });
-      showToast(`${parsed.length} movimientos importados`);
+      if(!parsed.length){showToast('CSV vacío o inválido','var(--spend-color)');return;}
+      setTxs(prev=>{ 
+        const ids=new Set(prev.map(t=>t.id)); 
+        return [...prev,...parsed.filter(t=>!ids.has(t.id))]; 
+      });
+      showToast(`${parsed.length} movimientos importados`, 'var(--income-color)');
     };
     r.readAsText(f); e.target.value='';
   };
@@ -922,47 +992,52 @@ function App() {
       {/* ── HEADER ── */}
       <header className="flex items-center justify-between gap-6 flex-wrap pb-2">
         <div className="flex items-center gap-4">
-          <img src="icon.png" alt="Logo" className="w-11 h-11 rounded-2xl object-cover shadow-xl border border-white/10"
+          <img src="icon.png" alt="Logo" className="w-11 h-11 rounded-2xl object-cover shadow-xl border" style={{borderColor: 'var(--border-color)'}}
                onError={e=>{ e.target.style.display='none'; }}/>
           <div>
-            <h1 className="font-serif text-[28px] italic leading-none tracking-tight text-bright">ZenGastos</h1>
-            <p className="text-[11px] text-dim font-mono mt-1 tracking-widest uppercase">finanzas compartidas</p>
+            <h1 className="font-serif text-[28px] italic leading-none tracking-tight" style={{color: 'var(--text-main)'}}>ZenGastos</h1>
+            <p className="text-[11px] font-mono mt-1 tracking-widest uppercase" style={{color: 'var(--text-dim)'}}>finanzas compartidas</p>
           </div>
         </div>
 
         <div className="glass rounded-xl flex items-center gap-1 p-1 shadow-lg">
-          <button onClick={prevMonth} className="p-2.5 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+          <button onClick={prevMonth} className="p-2.5 rounded-lg transition-all hover:opacity-70" style={{color: 'var(--text-dim)'}}>
             <LI name="ChevronLeft" size={18}/>
           </button>
-          <span className="px-4 font-semibold text-[15px] min-w-[150px] text-center">
-            {MONTHS[month]} <span className="font-mono text-dim ml-1">{year}</span>
+          <span className="px-4 font-semibold text-[15px] min-w-[150px] text-center" style={{color: 'var(--text-main)'}}>
+            {MONTHS[month]} <span className="font-mono ml-1" style={{color: 'var(--text-dim)'}}>{year}</span>
           </span>
-          <button onClick={nextMonth} className="p-2.5 rounded-lg hover:bg-raised text-dim hover:text-bright transition-all">
+          <button onClick={nextMonth} className="p-2.5 rounded-lg transition-all hover:opacity-70" style={{color: 'var(--text-dim)'}}>
             <LI name="ChevronRight" size={18}/>
           </button>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <button onClick={doExport}
-            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold text-dim hover:text-bright transition-all hover:bg-raised shadow-md">
+            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold transition-all shadow-md hover:-translate-y-0.5" style={{color: 'var(--text-dim)'}}>
             <LI name="Download" size={15}/> Exportar
           </button>
           <button onClick={()=>fileRef.current.click()}
-            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold text-dim hover:text-bright transition-all hover:bg-raised shadow-md">
+            className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-xs font-bold transition-all shadow-md hover:-translate-y-0.5" style={{color: 'var(--text-dim)'}}>
             <LI name="Upload" size={15}/> Importar
+          </button>
+          {/* BOTÓN DE CAMBIO DE TEMA */}
+          <button onClick={toggleTheme} title="Cambiar Tema"
+            className="flex items-center justify-center w-10 h-10 glass rounded-xl transition-all shadow-md hover:-translate-y-0.5" style={{color: 'var(--text-main)'}}>
+            <LI name={theme === 'dark' ? 'Heart' : 'Moon'} size={18}/>
           </button>
         </div>
       </header>
 
       {/* ── SUMMARY CARDS ── */}
       <div className="grid grid-cols-4 gap-4 summary-4">
-        <SummaryCard label="Gastos" value={fmtEur(totalSpend)} color="#f87171"
+        <SummaryCard label="Gastos" value={fmtEur(totalSpend)} color="var(--spend-color)"
           sub="este mes" icon={<LI name="TrendingDown" size={16}/>} delay="delay-1"/>
-        <SummaryCard label="Ingresos" value={fmtEur(totalIncome)} color="#34d399"
+        <SummaryCard label="Ingresos" value={fmtEur(totalIncome)} color="var(--income-color)"
           sub="este mes" icon={<LI name="TrendingUp" size={16}/>} delay="delay-2"/>
-        <SummaryCard label="Balance" value={fmtEur(balance)} color={balance>=0?'#34d399':'#f87171'}
+        <SummaryCard label="Balance" value={fmtEur(balance)} color={balance>=0?'var(--income-color)':'var(--spend-color)'}
           sub={balance>=0?'en positivo':'en déficit'} icon={<LI name="Wallet" size={16}/>} delay="delay-3"/>
-        <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)+'%'} color="#818cf8"
+        <SummaryCard label="% Presupuesto" value={budgetPct.toFixed(1)+'%'} color="var(--accent-color)"
           sub={totalIncome>0?`${fmtEur(totalSpend)} de ${fmtEur(totalIncome)}`:'sin ingresos'}
           icon={<LI name="Activity" size={16}/>} delay="delay-4"/>
       </div>
@@ -973,9 +1048,9 @@ function App() {
           <div key={tipo} className="glass rounded-2xl p-5 space-y-3.5 anim-fadeup">
             <div className="flex justify-between items-center">
               <span className="text-[11px] font-bold uppercase tracking-widest" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
-              <span className="font-mono text-[11px] text-dim bg-[#1c1c25] px-1.5 py-0.5 rounded border border-white/5">{pct.toFixed(0)}%</span>
+              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(0)}%</span>
             </div>
-            <div className="font-mono font-bold text-lg text-bright">{fmtEur(sum)}</div>
+            <div className="font-mono font-bold text-lg" style={{color: 'var(--text-main)'}}>{fmtEur(sum)}</div>
             <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
           </div>
         ))}
@@ -986,20 +1061,24 @@ function App() {
 
         {/* LEFT: Transactions */}
         <div className="glass rounded-2xl p-6 space-y-5 flex flex-col min-h-[500px]">
-          <div className="flex items-center justify-between flex-wrap gap-4 border-b border-border/50 pb-4">
+          <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4" style={{borderColor: 'var(--border-color)'}}>
             <div className="seg-wrap w-full max-w-[300px]">
               {segBtn('Todo','all')}
               {segBtn('Gastos','expense')}
               {segBtn('Ingresos','income')}
             </div>
-            <span className="font-mono text-xs font-medium text-dim bg-raised px-3 py-1.5 rounded-lg border border-white/5">{displayTx.length} items</span>
+            <span className="font-mono text-xs font-medium px-3 py-1.5 rounded-lg border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{displayTx.length} items</span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={()=>setModalConfig({ open: true, type: 'expense', tx: null })} className="btn-spend flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+            <button onClick={()=>setModalConfig({ open: true, type: 'expense', tx: null })} 
+              className="flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold transition-all shadow-sm hover:-translate-y-0.5"
+              style={{color: 'var(--spend-color)', background: 'var(--spend-bg)', border: '1px solid var(--border-color)'}}>
               <LI name="MinusCircle" size={18}/> Añadir Gasto
             </button>
-            <button onClick={()=>setModalConfig({ open: true, type: 'income', tx: null })} className="btn-income flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold">
+            <button onClick={()=>setModalConfig({ open: true, type: 'income', tx: null })} 
+              className="flex items-center justify-center gap-2 py-3 rounded-xl text-[14.5px] font-bold transition-all shadow-sm hover:-translate-y-0.5"
+              style={{color: 'var(--income-color)', background: 'var(--income-bg)', border: '1px solid var(--border-color)'}}>
               <LI name="PlusCircle" size={18}/> Añadir Ingreso
             </button>
           </div>
@@ -1007,8 +1086,8 @@ function App() {
           <div className="flex-1 overflow-y-auto pr-2 space-y-1 mt-2">
             {displayTx.length===0
               ? <div className="h-full flex flex-col items-center justify-center py-16 space-y-4 opacity-40">
-                  <LI name="Receipt" size={48} className="text-dim"/>
-                  <p className="text-[15px] font-medium text-dim">Sin movimientos en este mes</p>
+                  <LI name="Receipt" size={48} style={{color: 'var(--text-dim)'}}/>
+                  <p className="text-[15px] font-medium" style={{color: 'var(--text-dim)'}}>Sin movimientos en este mes</p>
                 </div>
               : displayTx.map(tx=><TxRow key={tx.id} tx={tx} onEdit={(tx)=>setModalConfig({ open: true, type: tx.type, tx })} onDelete={delTx}/>)
             }
@@ -1019,19 +1098,20 @@ function App() {
         <div className="space-y-6">
           <SettlementWidget monthTx={monthTx} />
           <BalanceChartWidget totalIncome={totalIncome} totalSpend={totalSpend} />
-          <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
+          <BudgetWidget monthKey={monthKey} totalSpend={totalSpend}/>
           <CategoryWidget monthTx={monthTx}/>
           <GoalsWidget/>
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-dim font-mono pt-6 pb-2 opacity-50 tracking-widest uppercase">
+      <p className="text-center text-[11px] font-mono pt-6 pb-2 opacity-50 tracking-widest uppercase" style={{color: 'var(--text-dim)'}}>
         ZenGastos Pro · {txs.length} Registros Locales
       </p>
 
       {/* Add / Edit TX Modal */}
       {modalConfig.open && (
         <AddTxModal 
+          theme={theme}
           type={modalConfig.type} 
           initialData={modalConfig.tx} 
           onSave={saveTx} 
