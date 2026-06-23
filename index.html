@@ -9,10 +9,12 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.png" />
 
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
 
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -44,6 +46,7 @@
     }
   </script>
 
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
   <style>
@@ -201,14 +204,18 @@
     }
   </style>
 
+  <!-- React + ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- VERSIÓN DE BABEL ASEGURADA CONTRA ERRORES -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
 
-<script type="text/babel">
+<!-- ¡NOTA! Ya NO usamos data-type="module" para evitar los bloqueos de tu navegador -->
+<script type="text/babel" data-presets="react,env">
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 // ══════════════════════════════════════════════
@@ -224,7 +231,6 @@ const USERS     = ['Dani 🦭', 'Nati 🌻'];
 
 const KEYS = {
   TX:      'zg_transactions',
-  BUDGET:  'zg_budgets',
   GOALS:   'zg_goals',
 };
 
@@ -394,7 +400,7 @@ function SummaryCard({ label, value, color, sub, icon, delay='', diff }) {
 }
 
 // ══════════════════════════════════════════════
-//  WIDGET: SETTLEMENT (CUENTAS CLARAS)
+//  WIDGETS
 // ══════════════════════════════════════════════
 function SettlementWidget({ monthTx }) {
   const sharedExp = monthTx.filter(t => t.type === 'expense' && (t.scope === 'Común' || !t.scope));
@@ -461,9 +467,6 @@ function SettlementWidget({ monthTx }) {
   );
 }
 
-// ══════════════════════════════════════════════
-//  WIDGET: ANÁLISIS DEL MES
-// ══════════════════════════════════════════════
 function MonthSummaryWidget({ balance }) {
   const isPositive = balance >= 0;
   const color = isPositive ? 'var(--income-color)' : 'var(--spend-color)';
@@ -505,9 +508,41 @@ function MonthSummaryWidget({ balance }) {
   );
 }
 
-// ══════════════════════════════════════════════
-//  WIDGET: CHART 
-// ══════════════════════════════════════════════
+function CategoryWidget({ monthTx }) {
+  const expenses = monthTx.filter(t=>t.type==='expense');
+  const total    = expenses.reduce((s,t)=>s+t.amount,0) || 1; 
+  
+  const data = TIPOS.map(tipo => {
+    const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
+    return { tipo, sum, pct:(sum/total)*100 };
+  }).sort((a,b)=>b.sum-a.sum); 
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
+          <LI name="PieChart" size={14}/> Categorías
+        </span>
+      </div>
+      
+      <div className="space-y-4 pt-1">
+        {data.map(({ tipo, sum, pct })=>(
+          <div key={tipo} className={sum === 0 ? "opacity-40" : ""}>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
+              <div className="flex gap-2.5 items-center">
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(0)}%</span>
+                <span className="font-mono text-[13px] font-bold" style={{color: 'var(--text-main)'}}>{fmtEur(sum)}</span>
+              </div>
+            </div>
+            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BalanceChartWidget({ totalIncome, totalSpend }) {
   const maxVal = Math.max(totalIncome, totalSpend, 1);
   const incPct = (totalIncome / maxVal) * 100;
@@ -542,8 +577,209 @@ function BalanceChartWidget({ totalIncome, totalSpend }) {
   );
 }
 
+function BudgetWidget({ totalSpend }) {
+  // Ahora usamos una clave global en lugar de monthKey
+  const [budget, setBudget] = useState(()=>ls('zg_global_budget', 0));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState('');
+
+  const pct    = budget > 0 ? (totalSpend/budget)*100 : 0;
+  const over   = pct > 100;
+  const barClr = over ? 'var(--spend-color)' : pct>80 ? 'var(--gold-color)' : 'var(--income-color)';
+
+  const save = () => {
+    const v = parseFloat(draft);
+    if (!isNaN(v) && v>0) {
+      setBudget(v); 
+      lsSet('zg_global_budget', v); // Guardamos globalmente
+    }
+    setEditing(false);
+  };
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
+          <LI name="Target" size={14}/> Presupuesto
+        </span>
+        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
+          className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{color: 'var(--accent-color)', background: 'var(--accent-bg)'}}>
+          <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
+        </button>
+      </div>
+
+      {budget > 0 ? (
+        <div className="pt-1">
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpend)}</div>
+              <div className="text-xs mt-1 font-medium" style={{color: 'var(--text-dim)'}}>de {fmtEur(budget)} marcados</div>
+            </div>
+            <div className="font-mono text-sm font-bold px-2 py-1 rounded-md border" style={{color:barClr, background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(1)}%</div>
+          </div>
+          <ProgBar pct={pct} color={barClr} big/>
+          {over && <p className="text-xs font-semibold flex items-center gap-1.5 mt-3" style={{color: 'var(--spend-color)'}}><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
+           <LI name="Crosshair" size={24} style={{color: 'var(--text-dim)'}}/>
+           <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Sin límite configurado.</p>
+        </div>
+      )}
+
+      {editing && (
+        <Modal title="Ajustar Presupuesto Fijo" onClose={()=>setEditing(false)}>
+          <div className="space-y-5">
+            <p className="text-[13px] mb-2" style={{color: 'var(--text-dim)'}}>Este límite se mantendrá igual en todos los meses hasta que lo vuelvas a modificar.</p>
+            <div>
+              <label className="f-label">Límite de gasto mensual (€)</label>
+              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
+                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
+            </div>
+            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
+              Confirmar
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function GoalsWidget({ globalBalance }) {
+  const [goals, setGoals]   = useState(()=>ls(KEYS.GOALS,[]));
+  const [newModal, setNew]  = useState(false);
+  const [addModal, setAdd]  = useState(null);
+  const [nf, setNf]         = useState({ name:'', target:'', saved:'', autoSweep: false });
+  const [addAmt, setAddAmt] = useState('');
+
+  const persist = (g) => { setGoals(g); lsSet(KEYS.GOALS,g); };
+
+  const createGoal = () => {
+    const t=parseFloat(nf.target), s=parseFloat(nf.saved)||0;
+    if (!nf.name.trim()||isNaN(t)||t<=0) return;
+    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s, autoSweep: nf.autoSweep }]);
+    setNf({name:'',target:'',saved:'', autoSweep: false}); setNew(false);
+  };
+
+  const addToGoal = (id) => {
+    const v=parseFloat(addAmt); if(isNaN(v)||v<=0) return;
+    persist(goals.map(g=>g.id===id?{...g,saved:Math.min(g.saved+v,g.target)}:g));
+    setAddAmt(''); setAdd(null);
+  };
+
+  const deleteGoal = (id) => persist(goals.filter(g=>g.id!==id));
+
+  return (
+    <div className="glass rounded-2xl p-6 space-y-5">
+      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
+        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
+          <LI name="Star" size={14}/> Metas
+        </span>
+        <button onClick={()=>setNew(true)} className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          style={{color: 'var(--gold-color)', background: 'var(--gold-bg)'}}>
+          <LI name="Plus" size={12}/> Nueva
+        </button>
+      </div>
+
+      {goals.length===0
+        ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
+            <LI name="PiggyBank" size={24} style={{color: 'var(--text-dim)'}}/>
+            <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Crea tu primera meta.</p>
+          </div>
+        : <div className="space-y-5 pt-1">
+            {goals.map(g=>{
+              const effectiveSaved = g.autoSweep && globalBalance > 0 ? g.saved + globalBalance : g.saved;
+              const pct=(effectiveSaved/g.target)*100;
+              const done=pct>=100;
+              const clr=done?'var(--income-color)':pct>50?'var(--gold-color)':'var(--accent-color)';
+              
+              return (
+                <div key={g.id} className="space-y-2.5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-[14.5px] flex items-center gap-2" style={{color: 'var(--text-main)'}}>
+                        {done && <span className="p-0.5 rounded-md" style={{color:'var(--income-color)', background: 'var(--income-bg)'}}><LI name="Check" size={12}/></span>}
+                        {g.name}
+                        {g.autoSweep && <span className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold" style={{background:'var(--gold-bg)', color:'var(--gold-color)'}}>Auto</span>}
+                      </div>
+                      <div className="font-mono text-xs mt-1" style={{color: 'var(--text-dim)'}}>
+                        {fmtEur(effectiveSaved)} de {fmtEur(g.target)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {!done && (
+                        <button onClick={()=>{setAdd(g.id);setAddAmt('');}}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                          style={{background:'var(--accent-bg)',color:'var(--accent-color)',border:'1px solid var(--border-color)'}}>
+                          <LI name="TrendingUp" size={13}/>
+                        </button>
+                      )}
+                      <button onClick={()=>deleteGoal(g.id)} className="p-1.5 rounded-lg transition-colors" style={{color: 'var(--text-dim)'}}>
+                        <LI name="Trash2" size={14}/>
+                      </button>
+                    </div>
+                  </div>
+                  <ProgBar pct={pct} color={clr}/>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {/* New goal modal */}
+      {newModal && (
+        <Modal title="Nueva meta" onClose={()=>setNew(false)}>
+          <div className="space-y-5">
+            <div><label className="f-label">Nombre de la meta</label>
+              <input type="text" className="f-input" placeholder="Ej: Viaje a Japón" value={nf.name} onChange={e=>setNf(p=>({...p,name:e.target.value}))} autoFocus/></div>
+            <div><label className="f-label">Objetivo (€)</label>
+              <input type="number" min="1" step="10" className="f-input font-mono" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
+            <div><label className="f-label">Ya ahorrado (€)</label>
+              <input type="number" min="0" step="10" className="f-input font-mono" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
+            
+            <div className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all" 
+                 style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-bg)' : 'var(--raised-bg)'}} 
+                 onClick={()=>setNf(p=>({...p, autoSweep: !p.autoSweep}))}>
+              <div className="w-5 h-5 rounded flex items-center justify-center border transition-colors" style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-color)' : 'transparent'}}>
+                {nf.autoSweep && <LI name="Check" size={14} className="text-black" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-bold" style={{color: 'var(--text-main)'}}>Ahorro Automático</p>
+                <p className="text-[10px]" style={{color: 'var(--text-dim)'}}>Suma todo el sobrante histórico a la meta</p>
+              </div>
+            </div>
+
+            <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-color)', color: 'var(--gold-color)' }}>
+              Empezar ahorro
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add money modal */}
+      {addModal && (
+        <Modal title="Ingresar ahorro" onClose={()=>setAdd(null)}>
+          <div className="space-y-5">
+            <p className="text-[15px]" style={{color: 'var(--text-dim)'}}>Sumar dinero a la meta <span className="font-bold italic" style={{color: 'var(--text-main)'}}>"{goals.find(g=>g.id===addModal)?.name}"</span></p>
+            <div><label className="f-label">Cantidad a ingresar (€)</label>
+              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="100.00" value={addAmt} onChange={e=>setAddAmt(e.target.value)} autoFocus/></div>
+            <button onClick={()=>addToGoal(addModal)} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
+              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
+              Confirmar ingreso
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════
-//  ADD / EDIT TRANSACTION MODAL
+//  ADD / EDIT TRANSACTION MODAL & ROW
 // ══════════════════════════════════════════════
 function AddTxModal({ type, initialData, onSave, onClose, month, year, theme }) {
   const today = new Date();
@@ -655,9 +891,6 @@ function AddTxModal({ type, initialData, onSave, onClose, month, year, theme }) 
   );
 }
 
-// ══════════════════════════════════════════════
-//  TRANSACTION ROW
-// ══════════════════════════════════════════════
 function TxRow({ tx, onEdit, onDelete }) {
   const isIn = tx.type==='income';
   const clr  = isIn ? 'var(--income-color)' : 'var(--spend-color)';
@@ -719,251 +952,6 @@ function TxRow({ tx, onEdit, onDelete }) {
 }
 
 // ══════════════════════════════════════════════
-//  WIDGET: BY CATEGORY
-// ══════════════════════════════════════════════
-function CategoryWidget({ monthTx }) {
-  const expenses = monthTx.filter(t=>t.type==='expense');
-  const total    = expenses.reduce((s,t)=>s+t.amount,0) || 1; 
-  
-  const data = TIPOS.map(tipo => {
-    const sum = expenses.filter(t=>t.tipo===tipo).reduce((s,t)=>s+t.amount,0);
-    return { tipo, sum, pct:(sum/total)*100 };
-  }).sort((a,b)=>b.sum-a.sum); 
-
-  return (
-    <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
-        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
-          <LI name="PieChart" size={14}/> Categorías
-        </span>
-      </div>
-      
-      <div className="space-y-4 pt-1">
-        {data.map(({ tipo, sum, pct })=>(
-          <div key={tipo} className={sum === 0 ? "opacity-40" : ""}>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-semibold" style={{color:TIPO_CLR[tipo]}}>{tipo}</span>
-              <div className="flex gap-2.5 items-center">
-                <span className="font-mono text-xs px-1.5 py-0.5 rounded border" style={{color: 'var(--text-dim)', background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(0)}%</span>
-                <span className="font-mono text-[13px] font-bold" style={{color: 'var(--text-main)'}}>{fmtEur(sum)}</span>
-              </div>
-            </div>
-            <ProgBar pct={pct} color={TIPO_CLR[tipo]}/>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
-//  WIDGET: MONTHLY BUDGET
-// ══════════════════════════════════════════════
-function BudgetWidget({ monthKey, totalSpent }) {
-  const [budgets, setBudgets] = useState(()=>ls(KEYS.BUDGET,{}));
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft]     = useState('');
-
-  const budget = budgets[monthKey] || 0;
-  const pct    = budget > 0 ? (totalSpent/budget)*100 : 0;
-  const over   = pct > 100;
-  const barClr = over ? 'var(--spend-color)' : pct>80 ? 'var(--gold-color)' : 'var(--income-color)';
-
-  const save = () => {
-    const v = parseFloat(draft);
-    if (!isNaN(v) && v>0) {
-      const next = {...budgets,[monthKey]:v};
-      setBudgets(next); lsSet(KEYS.BUDGET,next);
-    }
-    setEditing(false);
-  };
-
-  return (
-    <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
-        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
-          <LI name="Target" size={14}/> Presupuesto
-        </span>
-        <button onClick={()=>{setDraft(budget>0?String(budget):'');setEditing(true);}}
-          className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-          style={{color: 'var(--accent-color)', background: 'var(--accent-bg)'}}>
-          <LI name="Pencil" size={12}/> {budget>0?'Editar':'Establecer'}
-        </button>
-      </div>
-
-      {budget > 0 ? (
-        <div className="pt-1">
-          <div className="flex justify-between items-end mb-3">
-            <div>
-              <div className="font-mono text-[22px] font-bold" style={{color:barClr}}>{fmtEur(totalSpent)}</div>
-              <div className="text-xs mt-1 font-medium" style={{color: 'var(--text-dim)'}}>de {fmtEur(budget)} marcados</div>
-            </div>
-            <div className="font-mono text-sm font-bold px-2 py-1 rounded-md border" style={{color:barClr, background: 'var(--raised-bg)', borderColor: 'var(--border-color)'}}>{pct.toFixed(1)}%</div>
-          </div>
-          <ProgBar pct={pct} color={barClr} big/>
-          {over && <p className="text-xs font-semibold flex items-center gap-1.5 mt-3" style={{color: 'var(--spend-color)'}}><LI name="AlertTriangle" size={14}/>¡Límite superado!</p>}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-6 space-y-2 opacity-60">
-           <LI name="Crosshair" size={24} style={{color: 'var(--text-dim)'}}/>
-           <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Sin límite este mes.</p>
-        </div>
-      )}
-
-      {editing && (
-        <Modal title="Ajustar Presupuesto" onClose={()=>setEditing(false)}>
-          <div className="space-y-5">
-            <div>
-              <label className="f-label">Límite de gasto (€)</label>
-              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="1500.00"
-                value={draft} onChange={e=>setDraft(e.target.value)} autoFocus/>
-            </div>
-            <button onClick={save} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
-              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
-              Confirmar
-            </button>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
-//  WIDGET: SAVINGS GOALS (Auto-Ahorro con Balance Global)
-// ══════════════════════════════════════════════
-function GoalsWidget({ globalBalance }) {
-  const [goals, setGoals]   = useState(()=>ls(KEYS.GOALS,[]));
-  const [newModal, setNew]  = useState(false);
-  const [addModal, setAdd]  = useState(null);
-  const [nf, setNf]         = useState({ name:'', target:'', saved:'', autoSweep: false });
-  const [addAmt, setAddAmt] = useState('');
-
-  const persist = (g) => { setGoals(g); lsSet(KEYS.GOALS,g); };
-
-  const createGoal = () => {
-    const t=parseFloat(nf.target), s=parseFloat(nf.saved)||0;
-    if (!nf.name.trim()||isNaN(t)||t<=0) return;
-    persist([...goals, { id:genId(), name:nf.name.trim(), target:t, saved:s, autoSweep: nf.autoSweep }]);
-    setNf({name:'',target:'',saved:'', autoSweep: false}); setNew(false);
-  };
-
-  const addToGoal = (id) => {
-    const v=parseFloat(addAmt); if(isNaN(v)||v<=0) return;
-    persist(goals.map(g=>g.id===id?{...g,saved:Math.min(g.saved+v,g.target)}:g));
-    setAddAmt(''); setAdd(null);
-  };
-
-  const deleteGoal = (id) => persist(goals.filter(g=>g.id!==id));
-
-  return (
-    <div className="glass rounded-2xl p-6 space-y-5">
-      <div className="flex items-center justify-between border-b pb-3" style={{borderColor: 'var(--border-color)'}}>
-        <span className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{color: 'var(--text-dim)'}}>
-          <LI name="Star" size={14}/> Metas
-        </span>
-        <button onClick={()=>setNew(true)} className="text-xs font-semibold transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
-          style={{color: 'var(--gold-color)', background: 'var(--gold-bg)'}}>
-          <LI name="Plus" size={12}/> Nueva
-        </button>
-      </div>
-
-      {goals.length===0
-        ? <div className="flex flex-col items-center justify-center py-4 space-y-2 opacity-60">
-            <LI name="PiggyBank" size={24} style={{color: 'var(--text-dim)'}}/>
-            <p className="text-sm text-center" style={{color: 'var(--text-dim)'}}>Crea tu primera meta.</p>
-          </div>
-        : <div className="space-y-5 pt-1">
-            {goals.map(g=>{
-              // AQUÍ ESTÁ LA MAGIA: Suma el sobrante global histórico de TODOS los meses
-              const effectiveSaved = g.autoSweep && globalBalance > 0 ? g.saved + globalBalance : g.saved;
-              const pct=(effectiveSaved/g.target)*100;
-              const done=pct>=100;
-              const clr=done?'var(--income-color)':pct>50?'var(--gold-color)':'var(--accent-color)';
-              
-              return (
-                <div key={g.id} className="space-y-2.5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-semibold text-[14.5px] flex items-center gap-2" style={{color: 'var(--text-main)'}}>
-                        {done && <span className="p-0.5 rounded-md" style={{color:'var(--income-color)', background: 'var(--income-bg)'}}><LI name="Check" size={12}/></span>}
-                        {g.name}
-                        {g.autoSweep && <span className="px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest font-bold" style={{background:'var(--gold-bg)', color:'var(--gold-color)'}}>Auto</span>}
-                      </div>
-                      <div className="font-mono text-xs mt-1" style={{color: 'var(--text-dim)'}}>
-                        {fmtEur(effectiveSaved)} de {fmtEur(g.target)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {!done && (
-                        <button onClick={()=>{setAdd(g.id);setAddAmt('');}}
-                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all"
-                          style={{background:'var(--accent-bg)',color:'var(--accent-color)',border:'1px solid var(--border-color)'}}>
-                          <LI name="TrendingUp" size={13}/>
-                        </button>
-                      )}
-                      <button onClick={()=>deleteGoal(g.id)} className="p-1.5 rounded-lg transition-colors" style={{color: 'var(--text-dim)'}}>
-                        <LI name="Trash2" size={14}/>
-                      </button>
-                    </div>
-                  </div>
-                  <ProgBar pct={pct} color={clr}/>
-                </div>
-              );
-            })}
-          </div>
-      }
-
-      {/* New goal modal */}
-      {newModal && (
-        <Modal title="Nueva meta" onClose={()=>setNew(false)}>
-          <div className="space-y-5">
-            <div><label className="f-label">Nombre de la meta</label>
-              <input type="text" className="f-input" placeholder="Ej: Viaje a Japón" value={nf.name} onChange={e=>setNf(p=>({...p,name:e.target.value}))} autoFocus/></div>
-            <div><label className="f-label">Objetivo (€)</label>
-              <input type="number" min="1" step="10" className="f-input font-mono" placeholder="2000.00" value={nf.target} onChange={e=>setNf(p=>({...p,target:e.target.value}))}/></div>
-            <div><label className="f-label">Ya ahorrado (€)</label>
-              <input type="number" min="0" step="10" className="f-input font-mono" placeholder="0.00" value={nf.saved} onChange={e=>setNf(p=>({...p,saved:e.target.value}))}/></div>
-            
-            <div className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all" 
-                 style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-bg)' : 'var(--raised-bg)'}} 
-                 onClick={()=>setNf(p=>({...p, autoSweep: !p.autoSweep}))}>
-              <div className="w-5 h-5 rounded flex items-center justify-center border transition-colors" style={{borderColor: nf.autoSweep ? 'var(--gold-color)' : 'var(--border-color)', background: nf.autoSweep ? 'var(--gold-color)' : 'transparent'}}>
-                {nf.autoSweep && <LI name="Check" size={14} className="text-black" />}
-              </div>
-              <div className="flex-1">
-                <p className="text-[13px] font-bold" style={{color: 'var(--text-main)'}}>Ahorro Automático</p>
-                <p className="text-[10px]" style={{color: 'var(--text-dim)'}}>Suma todo el sobrante histórico a la meta</p>
-              </div>
-            </div>
-
-            <button onClick={createGoal} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
-              style={{ background: 'var(--gold-bg)', border: '1px solid var(--gold-color)', color: 'var(--gold-color)' }}>
-              Empezar ahorro
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {/* Add money modal */}
-      {addModal && (
-        <Modal title="Ingresar ahorro" onClose={()=>setAdd(null)}>
-          <div className="space-y-5">
-            <p className="text-[15px]" style={{color: 'var(--text-dim)'}}>Sumar dinero a la meta <span className="font-bold italic" style={{color: 'var(--text-main)'}}>"{goals.find(g=>g.id===addModal)?.name}"</span></p>
-            <div><label className="f-label">Cantidad a ingresar (€)</label>
-              <input type="number" min="1" step="10" className="f-input text-lg font-mono" placeholder="100.00" value={addAmt} onChange={e=>setAddAmt(e.target.value)} autoFocus/></div>
-            <button onClick={()=>addToGoal(addModal)} className="w-full py-3.5 rounded-xl text-[15px] font-bold transition-all shadow-lg"
-              style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-color)', color: 'var(--accent-color)' }}>
-              Confirmar ingreso
-            </button>
-          </div>
-        </Modal>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
 //  MAIN APP
 // ══════════════════════════════════════════════
 function App() {
@@ -978,10 +966,8 @@ function App() {
   const [toast, setToast]   = useState(null);
   const fileRef             = useRef();
 
-  // Estado del Tema
   const [theme, setTheme] = useState(() => ls('zg_theme', 'dark'));
 
-  // Aplicar Tema al HTML body cada vez que cambie
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
     lsSet('zg_theme', theme);
@@ -996,9 +982,6 @@ function App() {
   const showToast = (msg, color='var(--income-color)') => {
     setToast({msg,color}); setTimeout(()=>setToast(null),2600);
   };
-
-  // DATOS MES ACTUAL
-  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
 
   const monthTx = useMemo(()=>
     txs.filter(t=>{const d=new Date(t.date);return d.getMonth()===month&&d.getFullYear()===year;})
@@ -1138,7 +1121,7 @@ function App() {
       </div>
 
       {/* ── MAIN 2-COLUMN GRID ── */}
-      <div className="grid gap-6 two-col" style={{gridTemplateColumns:'1fr 380px'}}>
+      <div className="grid gap-6 two-col pt-2" style={{gridTemplateColumns:'1fr 380px'}}>
 
         {/* LEFT: Transactions */}
         <div className="glass rounded-2xl p-6 space-y-5 flex flex-col min-h-[500px]">
@@ -1180,8 +1163,8 @@ function App() {
           <MonthSummaryWidget balance={balance} />
           <SettlementWidget monthTx={monthTx} />
           <BalanceChartWidget totalIncome={totalIncome} totalSpend={totalSpend} />
+          <BudgetWidget totalSpend={totalSpend}/>
           <CategoryWidget monthTx={monthTx}/>
-          <BudgetWidget monthKey={monthKey} totalSpent={totalSpend}/>
           <GoalsWidget globalBalance={globalBalance} />
         </div>
       </div>
