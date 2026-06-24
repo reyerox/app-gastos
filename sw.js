@@ -1,5 +1,5 @@
-// ─── ZenGastos Service Worker v6 ─────────────────────────────
-const CACHE_NAME = 'zengastos-v6';
+// ─── ZenGastos Service Worker v7 ─────────────────────────────
+const CACHE_NAME = 'zengastos-v7';
 
 const PRECACHE = [
   './',
@@ -17,7 +17,7 @@ const CDN_ORIGINS = [
 
 // ── Install: precache shell ───────────────────────────────────
 self.addEventListener('install', e => {
-  console.log('[SW] ZenGastos v2 — instalando');
+  console.log('[SW] ZenGastos v7 — instalando');
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then(c => c.addAll(PRECACHE))
@@ -27,7 +27,7 @@ self.addEventListener('install', e => {
 
 // ── Activate: clean old caches ────────────────────────────────
 self.addEventListener('activate', e => {
-  console.log('[SW] ZenGastos v2 — activando');
+  console.log('[SW] ZenGastos v7 — activando');
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
